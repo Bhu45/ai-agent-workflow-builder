@@ -2,7 +2,6 @@
 'use client';
 
 import { useAuthenticationStatus, useNhostClient } from '@nhost/nextjs';
-// @ts-expect-error Types missing in some Apollo versions
 import { useSubscription } from '@apollo/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useRouter } from 'next/navigation';

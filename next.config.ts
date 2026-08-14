@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ['@nhost/react-apollo', '@nhost/nextjs', '@apollo/client'],
 };
 
 export default nextConfig;
