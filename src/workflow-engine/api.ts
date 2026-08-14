@@ -5,7 +5,7 @@ const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN
   ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
   : 'http://localhost:8080/v1/graphql';
 
-const adminSecret = process.env.NHOST_ADMIN_SECRET || '';
+const adminSecret = process.env.HASURA_GRAPHQL_ADMIN_SECRET || '';
 
 // Admin client for backend-only updates
 export const adminGraphQLClient = new GraphQLClient(endpoint, {

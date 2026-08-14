@@ -5,7 +5,13 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 1. Extract Hasura Action Payload
+    // 1. Authenticate Request from Hasura
+    const actionSecret = req.headers.get('x-hasura-admin-secret');
+    if (actionSecret !== process.env.HASURA_GRAPHQL_ADMIN_SECRET) {
+      return NextResponse.json({ message: 'Unauthorized: Invalid admin secret' }, { status: 401 });
+    }
+
+    // 2. Extract Hasura Action Payload
     const userId = body.session_variables?.['x-hasura-user-id'];
     const workflowId = body.input?.workflow_id;
     const initialInput = body.input?.initial_input || {};
