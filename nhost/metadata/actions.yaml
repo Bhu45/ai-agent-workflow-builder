@@ -1,6 +1,7 @@
 actions:
   - name: triggerWorkflowRun
     definition:
+      kind: synchronous
       handler: "{{NEXT_PUBLIC_APP_URL}}/api/actions/triggerWorkflowRun"
       output_type: TriggerWorkflowRunOutput
       forward_client_headers: true
@@ -11,6 +12,7 @@ actions:
       - role: user
   - name: approveStep
     definition:
+      kind: synchronous
       handler: "{{NEXT_PUBLIC_APP_URL}}/api/actions/approveStep"
       output_type: ApproveStepOutput
       forward_client_headers: true

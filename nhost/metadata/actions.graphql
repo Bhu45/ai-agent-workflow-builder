@@ -3,9 +3,7 @@ type Mutation {
     workflow_id: uuid!
     initial_input: jsonb
   ): TriggerWorkflowRunOutput
-}
 
-type Mutation {
   approveStep (
     workflow_run_id: uuid!
     approved: Boolean!
