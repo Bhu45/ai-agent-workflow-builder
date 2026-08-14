@@ -126,5 +126,6 @@ SELECT
     o.quota_period_start,
     COUNT(wr.id) AS total_runs_this_period
 FROM organizations o
-LEFT JOIN workflow_runs wr ON o.id = wr.workflow_id AND wr.created_at >= o.quota_period_start
+LEFT JOIN workflows w ON o.id = w.org_id
+LEFT JOIN workflow_runs wr ON w.id = wr.workflow_id AND wr.created_at >= o.quota_period_start
 GROUP BY o.id, o.name, o.quota_limit, o.quota_used, o.quota_period_start;
