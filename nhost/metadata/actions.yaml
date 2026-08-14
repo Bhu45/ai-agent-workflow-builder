@@ -1,0 +1,28 @@
+actions:
+  - name: triggerWorkflowRun
+    definition:
+      handler: "{{NEXT_PUBLIC_APP_URL}}/api/actions/triggerWorkflowRun"
+      output_type: TriggerWorkflowRunOutput
+      forward_client_headers: true
+      headers:
+        - name: x-hasura-admin-secret
+          value_from_env: NHOST_ADMIN_SECRET
+    permissions:
+      - role: user
+  - name: approveStep
+    definition:
+      handler: "{{NEXT_PUBLIC_APP_URL}}/api/actions/approveStep"
+      output_type: ApproveStepOutput
+      forward_client_headers: true
+      headers:
+        - name: x-hasura-admin-secret
+          value_from_env: NHOST_ADMIN_SECRET
+    permissions:
+      - role: user
+custom_types:
+  enums: []
+  input_objects: []
+  objects:
+    - name: TriggerWorkflowRunOutput
+    - name: ApproveStepOutput
+  scalars: []

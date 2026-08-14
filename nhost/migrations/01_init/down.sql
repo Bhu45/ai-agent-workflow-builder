@@ -1,0 +1,13 @@
+DROP VIEW IF EXISTS organization_monthly_usage;
+DROP TABLE IF EXISTS internal_app_data CASCADE;
+DROP TABLE IF EXISTS step_runs CASCADE;
+DROP TABLE IF EXISTS workflow_runs CASCADE;
+DROP TABLE IF EXISTS workflow_triggers CASCADE;
+DROP TABLE IF EXISTS workflow_steps CASCADE;
+DROP TABLE IF EXISTS workflows CASCADE;
+DROP TABLE IF EXISTS org_members CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
+DROP TABLE IF EXISTS run_statuses CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+
+DROP FUNCTION IF EXISTS set_current_timestamp_updated_at;

@@ -1,0 +1,25 @@
+table:
+  name: internal_app_data
+  schema: public
+object_relationships:
+  - name: organization
+    using:
+      foreign_key_constraint_on: org_id
+  - name: workflow_run
+    using:
+      foreign_key_constraint_on: workflow_run_id
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - org_id
+        - workflow_run_id
+        - data
+        - created_at
+
+      filter:
+        organization:
+          org_members:
+            user_id:
+              _eq: X-Hasura-User-Id

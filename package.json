@@ -9,6 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@apollo/client": "^4.2.12",
+    "@nhost/nextjs": "^2.3.1",
+    "@nhost/react": "^3.11.2",
+    "@nhost/react-apollo": "^18.0.2",
+    "graphql": "^17.0.2",
+    "graphql-request": "^7.4.0",
+    "lucide-react": "^1.31.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
