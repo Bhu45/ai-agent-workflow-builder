@@ -32,3 +32,11 @@ select_permissions:
         org_members:
           user_id:
             _eq: X-Hasura-User-Id
+update_permissions:
+  - role: user
+    permission:
+      columns: []
+      filter:
+        org_members:
+          user_id:
+            _eq: X-Hasura-User-Id
