@@ -26,4 +26,11 @@ BEGIN
     -- Return the created organization
     RETURN QUERY SELECT * FROM public.organizations WHERE id = v_org_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public;
+
+-- Revoke execute from PUBLIC to ensure only authorized DB roles (like the Hasura engine) can run it
+REVOKE EXECUTE ON FUNCTION public.create_organization_atomic(json, text) FROM PUBLIC;
+
+-- Explicitly grant to postgres (and hasura/nhost_hasura if it exists, but postgres is guaranteed in Nhost)
+GRANT EXECUTE ON FUNCTION public.create_organization_atomic(json, text) TO postgres;
+
