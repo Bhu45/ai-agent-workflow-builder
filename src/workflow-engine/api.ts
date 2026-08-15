@@ -160,6 +160,10 @@ export async function getWorkflowRunAsUser(runId: string, authHeader: string | n
           status
           output
           workflow_step_id
+          workflow_step {
+            id
+            type
+          }
         }
       }
     }
