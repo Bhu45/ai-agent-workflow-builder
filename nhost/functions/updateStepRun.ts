@@ -24,7 +24,7 @@ export default async (req: Request, res: Response) => {
   const completedAt = ['completed', 'failed', 'skipped'].includes(status) ? '"now()"' : 'null';
 
   const mutation = `
-    mutation UpdateStepRun($stepRunId: uuid!, $status: String!, $output: jsonb, $error: String) {
+    mutation UpdateStepRun($stepRunId: uuid!, $status: run_statuses_enum!, $output: jsonb, $error: String) {
       update_step_runs_by_pk(
         pk_columns: { id: $stepRunId },
         _set: { 
@@ -38,7 +38,8 @@ export default async (req: Request, res: Response) => {
   `;
 
   try {
-    const data: any = await client.request(mutation, { stepRunId, status, output, error });
+    const enumStatus = status.toUpperCase();
+    const data: any = await client.request(mutation, { stepRunId, status: enumStatus, output, error });
     return res.status(200).json({ id: data.update_step_runs_by_pk?.id });
   } catch (err: any) {
     if (err.response && err.response.errors) {

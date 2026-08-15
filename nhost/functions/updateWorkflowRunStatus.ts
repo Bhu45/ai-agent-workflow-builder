@@ -24,7 +24,7 @@ export default async (req: Request, res: Response) => {
   const completedAt = ['completed', 'failed'].includes(status) ? '"now()"' : 'null';
 
   const mutation = `
-    mutation UpdateRun($runId: uuid!, $status: String!, $error: String) {
+    mutation UpdateRun($runId: uuid!, $status: run_statuses_enum!, $error: String) {
       update_workflow_runs_by_pk(
         pk_columns: { id: $runId },
         _set: { 
@@ -37,7 +37,8 @@ export default async (req: Request, res: Response) => {
   `;
 
   try {
-    const data: any = await client.request(mutation, { runId, status, error });
+    const enumStatus = status.toUpperCase();
+    const data: any = await client.request(mutation, { runId, status: enumStatus, error });
     return res.status(200).json({ id: data.update_workflow_runs_by_pk?.id });
   } catch (err: any) {
     if (err.response && err.response.errors) {

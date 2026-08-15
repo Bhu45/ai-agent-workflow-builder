@@ -28,7 +28,7 @@ export default async (req: Request, res: Response) => {
       insert_step_runs_one(object: {
         workflow_run_id: $runId,
         workflow_step_id: $stepId,
-        status: "running",
+        status: RUNNING,
         input: $input,
         started_at: "now()"
       }) { id }
