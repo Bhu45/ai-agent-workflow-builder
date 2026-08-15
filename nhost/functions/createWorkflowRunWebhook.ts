@@ -21,7 +21,7 @@ export default async (req: Request, res: Response) => {
 
   const mutation = `
     mutation CreateRun($workflowId: uuid!) {
-      insert_workflow_runs_one(object: { workflow_id: $workflowId, status: RUNNING, started_at: "now()" }) {
+      insert_workflow_runs_one(object: { workflow_id: $workflowId, status: running, started_at: "now()" }) {
         id
       }
     }

@@ -37,8 +37,7 @@ export default async (req: Request, res: Response) => {
   `;
 
   try {
-    const enumStatus = status.toUpperCase();
-    const data: any = await client.request(mutation, { runId, status: enumStatus, error });
+    const data: any = await client.request(mutation, { runId, status, error });
     return res.status(200).json({ id: data.update_workflow_runs_by_pk?.id });
   } catch (err: any) {
     if (err.response && err.response.errors) {
