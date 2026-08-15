@@ -88,3 +88,15 @@ export const UPSERT_WORKFLOW_TRIGGER = `
     }
   }
 `;
+
+export const TRIGGER_WORKFLOW_RUN = `
+  mutation TriggerWorkflowRun($workflow_id: uuid!, $initial_input: jsonb) {
+    triggerWorkflowRun(
+      workflow_id: $workflow_id,
+      initial_input: $initial_input
+    ) {
+      run_id
+      status
+    }
+  }
+`;

@@ -9,7 +9,8 @@ import {
   GET_WORKFLOW_BY_ID, 
   UPDATE_WORKFLOW, 
   REPLACE_WORKFLOW_STEPS,
-  UPSERT_WORKFLOW_TRIGGER 
+  UPSERT_WORKFLOW_TRIGGER,
+  TRIGGER_WORKFLOW_RUN
 } from '@/graphql/workflows';
 
 export default function WorkflowBuilder({ params }: { params: Promise<{ id: string }> }) {
@@ -103,23 +104,19 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
     setRunning(true);
     setErrorMsg('');
     try {
-      // Trigger run via Action endpoint directly (or GraphQL if we mapped it)
-      const res = await fetch('/api/actions/triggerWorkflowRun', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${nhost.auth.getAccessToken()}`
-        },
-        body: JSON.stringify({
-          action: { name: 'triggerWorkflowRun' },
-          input: { workflow_id: id, initial_input: {} },
-          session_variables: { 'x-hasura-user-id': nhost.auth.getUser()?.id }
-        })
+      const { data, error } = await nhost.graphql.request(TRIGGER_WORKFLOW_RUN, {
+        workflow_id: id,
+        initial_input: {}
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Run failed');
+
+      if (error) {
+        throw new Error(Array.isArray(error) ? error[0].message : (error as any).message || 'Run failed');
+      }
       
-      router.push(`/workflows/${id}/runs/${data.run_id}`);
+      const runId = data?.triggerWorkflowRun?.run_id;
+      if (!runId) throw new Error('No run ID returned from action');
+
+      router.push(`/workflows/${id}/runs/${runId}`);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error triggering run');
       setRunning(false);
