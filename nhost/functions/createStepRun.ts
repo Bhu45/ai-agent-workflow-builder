@@ -23,7 +23,8 @@ export default async (req: Request, res: Response) => {
     headers: { 'x-hasura-admin-secret': adminSecret },
   });
 
-  const mutation = `n    mutation CreateStepRun($runId: uuid!, $stepId: uuid!, $input: jsonb!) {
+  const mutation = `
+    mutation CreateStepRun($runId: uuid!, $stepId: uuid!, $input: jsonb!) {
       insert_step_runs_one(object: {
         workflow_run_id: $runId,
         workflow_step_id: $stepId,
