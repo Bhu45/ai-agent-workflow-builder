@@ -103,10 +103,14 @@ export async function executeWorkflowFromRun(runId: string, workflowId: string, 
 
   console.log(`[Engine] Workflow run ${runId} steps finished. Incrementing quota.`);
   
-  const quotaGranted = await incrementQuota(orgId);
-  if (!quotaGranted) {
-    await updateWorkflowRunStatus(runId, 'failed', 'Quota exhausted during execution by concurrent runs');
-    return { runId, status: 'failed', error: 'Quota exhausted during execution by concurrent runs' };
+  // Quota tracking is best-effort and must not fail an otherwise successful workflow execution.
+  try {
+    const quotaGranted = await incrementQuota(orgId);
+    if (!quotaGranted) {
+      console.warn(`[Engine] Quota increment was not applied for org ${orgId}; continuing workflow completion.`);
+    }
+  } catch (err: any) {
+    console.error(`[Engine] Non-fatal quota increment error for org ${orgId}:`, err.message || err);
   }
 
   await updateWorkflowRunStatus(runId, 'completed');
@@ -230,10 +234,14 @@ export async function resumeWorkflow(runId: string, userId: string, approved: bo
 
   console.log(`[Engine] Workflow run ${runId} steps finished. Incrementing quota.`);
   
-  const quotaGranted = await incrementQuota(orgId);
-  if (!quotaGranted) {
-    await updateWorkflowRunStatus(runId, 'failed', 'Quota exhausted during execution by concurrent runs');
-    return { runId, status: 'failed', error: 'Quota exhausted during execution by concurrent runs' };
+  // Quota tracking is best-effort and must not fail an otherwise successful workflow execution.
+  try {
+    const quotaGranted = await incrementQuota(orgId);
+    if (!quotaGranted) {
+      console.warn(`[Engine] Quota increment was not applied for org ${orgId}; continuing workflow completion.`);
+    }
+  } catch (err: any) {
+    console.error(`[Engine] Non-fatal quota increment error for org ${orgId}:`, err.message || err);
   }
 
   await updateWorkflowRunStatus(runId, 'completed');
