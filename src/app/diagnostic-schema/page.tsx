@@ -58,21 +58,25 @@ export default function DiagnosticSchema() {
   if (!isAuthenticated) return <p style={{ padding: '2rem' }}>Please log in first.</p>;
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h2>Authenticated Schema Diagnostic</h2>
-      
-      <div style={{ marginBottom: '2rem' }}>
-        <h3>1. /api/diagnostics/schema Response:</h3>
-        <pre style={{ background: '#f4f4f4', padding: '1rem', borderRadius: '4px' }}>
-          {result ? JSON.stringify(result, null, 2) : 'Running...'}
-        </pre>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '3rem 2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <h2 style={{ color: '#0f172a', marginBottom: '2rem', fontSize: '1.75rem', fontWeight: 'bold' }}>Authenticated Schema Diagnostic</h2>
+        
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', marginBottom: '2rem' }}>
+          <h3 style={{ color: '#0f172a', marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>1. /api/diagnostics/schema Response</h3>
+          <p style={{ color: '#475569', marginBottom: '1rem', fontSize: '0.95rem' }}>Server-side proxy result:</p>
+          <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '18px', borderRadius: '10px', overflowX: 'auto', fontSize: '14px', lineHeight: 1.6, margin: 0, fontFamily: 'monospace' }}>
+            {result ? JSON.stringify(result, null, 2) : 'Running...'}
+          </pre>
+        </div>
 
-      <div>
-        <h3>2. Direct Client GraphQL Introspection:</h3>
-        <pre style={{ background: '#f4f4f4', padding: '1rem', borderRadius: '4px' }}>
-          {directResult ? JSON.stringify(directResult, null, 2) : 'Running...'}
-        </pre>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px' }}>
+          <h3 style={{ color: '#0f172a', marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>2. Direct Client GraphQL Introspection</h3>
+          <p style={{ color: '#475569', marginBottom: '1rem', fontSize: '0.95rem' }}>Browser-side direct GraphQL execution:</p>
+          <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '18px', borderRadius: '10px', overflowX: 'auto', fontSize: '14px', lineHeight: 1.6, margin: 0, fontFamily: 'monospace' }}>
+            {directResult ? JSON.stringify(directResult, null, 2) : 'Running...'}
+          </pre>
+        </div>
       </div>
     </div>
   );
