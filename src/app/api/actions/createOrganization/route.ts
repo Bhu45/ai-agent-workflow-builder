@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Error creating organization:', error);
     return NextResponse.json(
-      { message: error.message || 'Internal server error' },
+      { message: 'Unable to create organization. Please try again.' },
       { status: 500 }
     );
   }
