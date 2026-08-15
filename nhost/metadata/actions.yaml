@@ -7,7 +7,7 @@ actions:
       forward_client_headers: true
       headers:
         - name: x-hasura-admin-secret
-          value_from_env: NHOST_ACTION_SECRET
+          value_from_env: APP_ACTION_SECRET
     permissions:
       - role: user
   - name: approveStep
@@ -18,7 +18,7 @@ actions:
       forward_client_headers: true
       headers:
         - name: x-hasura-admin-secret
-          value_from_env: NHOST_ACTION_SECRET
+          value_from_env: APP_ACTION_SECRET
     permissions:
       - role: user
   - name: createOrganization
@@ -29,7 +29,7 @@ actions:
       forward_client_headers: true
       headers:
         - name: x-hasura-admin-secret
-          value_from_env: NHOST_ACTION_SECRET
+          value_from_env: APP_ACTION_SECRET
     permissions:
       - role: user
 custom_types:

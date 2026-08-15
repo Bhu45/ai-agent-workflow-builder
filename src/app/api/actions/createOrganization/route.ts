@@ -4,7 +4,7 @@ import { adminGraphQLClient } from '@/workflow-engine/api';
 export async function POST(req: Request) {
   try {
     const actionSecret = req.headers.get('x-hasura-admin-secret');
-    if (actionSecret !== process.env.NHOST_ACTION_SECRET) {
+    if (actionSecret !== process.env.APP_ACTION_SECRET) {
       return NextResponse.json({ message: 'Unauthorized: Invalid action secret' }, { status: 401 });
     }
 
