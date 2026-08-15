@@ -36,14 +36,19 @@ export default async (req: Request, res: Response) => {
   `;
 
   try {
+    console.log(`[createStepRun] runId=${runId} stepId=${stepId}`);
     const data: any = await client.request(mutation, { runId, stepId, input });
     return res.status(200).json({ id: data.insert_step_runs_one.id });
   } catch (err: any) {
     if (err.response && err.response.errors) {
       console.error('[createStepRun.ts] GraphQL Error:', JSON.stringify(err.response.errors, null, 2));
+      return res.status(500).json({ 
+        error: 'Database execution failed',
+        details: err.response.errors
+      });
     } else {
       console.error('[createStepRun.ts] Execution Error:', err.message || err);
+      return res.status(500).json({ error: 'Database execution failed' });
     }
-    return res.status(500).json({ error: 'Database execution failed' });
   }
 };

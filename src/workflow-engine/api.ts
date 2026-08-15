@@ -22,7 +22,7 @@ async function callNhostFunction(functionName: string, payload: any) {
   if (!res.ok) {
     const text = await res.text();
     console.error(`[Nhost Function ${functionName}] Error:`, text);
-    throw new Error(`Failed to call ${functionName}: ${res.statusText}`);
+    throw new Error(`Failed to call ${functionName}: ${res.status} ${text}`);
   }
   return res.json();
 }
