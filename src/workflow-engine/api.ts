@@ -6,7 +6,7 @@ const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN
   : 'http://localhost:8080/v1/graphql';
 
 const NHOST_FUNCTIONS_URL = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
-  ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.nhost.run/v1/functions`
+  ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.functions.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
   : 'http://localhost:1337/v1/functions';
 
 async function callNhostFunction(functionName: string, payload: any) {
