@@ -24,7 +24,7 @@ export default async (req: Request, res: Response) => {
   const mutation = `
     mutation IncrementQuota($orgId: uuid!) {
       update_organizations(
-        where: { id: { _eq: $orgId }, quota_used: { _lt: quota_limit } },
+        where: { id: { _eq: $orgId }, quota_used: { _clt: quota_limit } },
         _inc: { quota_used: 1 }
       ) {
         affected_rows
@@ -38,9 +38,13 @@ export default async (req: Request, res: Response) => {
   } catch (err: any) {
     if (err.response && err.response.errors) {
       console.error('[incrementQuota.ts] GraphQL Error:', JSON.stringify(err.response.errors, null, 2));
+      return res.status(500).json({
+        error: 'Database execution failed',
+        details: err.response.errors
+      });
     } else {
       console.error('[incrementQuota.ts] Execution Error:', err.message || err);
+      return res.status(500).json({ error: 'Database execution failed', details: err.message });
     }
-    return res.status(500).json({ error: 'Database execution failed' });
   }
 };
