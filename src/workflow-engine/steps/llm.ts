@@ -3,7 +3,22 @@ export async function executeLlmCall(config: any, input: string) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
 
-  const model = config.model || 'gemini-3.6-flash';
+  const configuredModel = config.model;
+  const deprecatedModels = new Set([
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-001',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-preview',
+    'gemini-2.5-flash-preview-09-25'
+  ]);
+
+  const model =
+    !configuredModel || deprecatedModels.has(configuredModel)
+      ? 'gemini-3.6-flash'
+      : configuredModel;
+
+  console.log(`[LLM] model=${model}`);
+  
   const systemPrompt = config.prompt || 'You are a helpful assistant.';
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
