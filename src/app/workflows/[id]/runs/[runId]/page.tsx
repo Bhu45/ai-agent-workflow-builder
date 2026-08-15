@@ -70,7 +70,8 @@ export default function WorkflowRunMonitor({ params }: { params: Promise<{ id: s
       );
       
       if (graphqlError) {
-        throw new Error(graphqlError[0]?.message || 'Approval failed');
+        const errors = Array.isArray(graphqlError) ? graphqlError : [graphqlError];
+        throw new Error((errors[0] as any)?.message || 'Approval failed');
       }
       // Subscriptions will automatically update the UI!
     } catch (err: any) {
