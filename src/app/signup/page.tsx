@@ -13,7 +13,9 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signUpEmailPassword(email, password);
+    const result = await signUpEmailPassword(email, password, {
+      redirectTo: `${window.location.origin}/verify`
+    });
     if (result.isSuccess) {
       router.push('/dashboard');
     }
