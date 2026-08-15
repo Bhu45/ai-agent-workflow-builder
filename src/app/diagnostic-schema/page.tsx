@@ -40,11 +40,13 @@ export default function DiagnosticSchema() {
       `;
       const directData = await nhost.graphql.request(query);
       const fields = directData.data?.__type?.fields || [];
-      const hasMutation = fields.some((f: any) => f.name === 'create_organization_atomic');
+      const hasOrg = fields.some((f: any) => f.name === 'create_organization_atomic');
+      const hasRun = fields.some((f: any) => f.name === 'create_workflow_run_atomic');
       
       setDirectResult({
         success: !directData.error,
-        has_create_organization_atomic: hasMutation,
+        has_create_organization_atomic: hasOrg,
+        has_create_workflow_run_atomic: hasRun,
         error: directData.error
       });
 

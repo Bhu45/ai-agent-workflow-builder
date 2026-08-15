@@ -38,11 +38,13 @@ export async function GET(req: Request) {
     }
 
     const fields = data.data?.__type?.fields || [];
-    const hasFunction = fields.some((f: any) => f.name === 'create_organization_atomic');
+    const hasOrg = fields.some((f: any) => f.name === 'create_organization_atomic');
+    const hasRun = fields.some((f: any) => f.name === 'create_workflow_run_atomic');
 
     return NextResponse.json({
       success: true,
-      has_create_organization_atomic: hasFunction
+      has_create_organization_atomic: hasOrg,
+      has_create_workflow_run_atomic: hasRun
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
