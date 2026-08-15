@@ -30,7 +30,10 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log('[Action] createOrganization mutation stage: START');
+    console.log('[Action] createOrganization mutation stage: START', { 
+      authHeaderPresent: !!authHeader,
+      userId: body.session_variables?.['x-hasura-user-id']
+    });
 
     const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
       ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
@@ -66,16 +69,18 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('[Action] Error creating organization (Diagnostic):');
+    const details = error.response?.errors ?? error.message;
     if (error.response?.errors) {
-      console.error('[Action] Hasura Errors:', JSON.stringify(error.response.errors.map((e: any) => ({
-        message: e.message,
-        extensions: e.extensions
-      }))));
+      console.error('[Action] Hasura Errors:', JSON.stringify(error.response.errors, null, 2));
     } else {
       console.error('[Action] Non-GraphQL Error:', error.message);
     }
     return NextResponse.json(
-      { message: 'Unable to create organization. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
+      { 
+        message: 'Unable to create organization', 
+        details,
+        extensions: { code: 'INTERNAL_ERROR' } 
+      },
       { status: 400 }
     );
   }
