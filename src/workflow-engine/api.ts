@@ -86,17 +86,22 @@ export async function incrementQuota(orgId: string): Promise<boolean> {
 }
 
 export async function createWorkflowRun(workflowId: string, authHeader: string | null) {
-  // Use the new PostgreSQL SECURITY DEFINER function via user GraphQL mutation
+  // Use native Hasura insert mutation relying on Row-Level Security permissions
   const mutation = `
-    mutation CreateRunAtomic($workflowId: uuid!) {
-      create_workflow_run_atomic(wf_id: $workflowId) {
+    mutation TriggerWorkflowRun($workflowId: uuid!) {
+      insert_workflow_runs_one(
+        object: {
+          workflow_id: $workflowId
+        }
+      ) {
         id
+        status
       }
     }
   `;
   const client = getUserGraphQLClient(authHeader);
   const data: any = await client.request(mutation, { workflowId });
-  return data.create_workflow_run_atomic[0].id;
+  return data.insert_workflow_runs_one.id;
 }
 
 export async function createWorkflowRunWebhook(workflowId: string) {

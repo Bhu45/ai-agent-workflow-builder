@@ -41,6 +41,20 @@ update_permissions:
             org_members:
               user_id:
                 _eq: X-Hasura-User-Id
+insert_permissions:
+  - role: user
+    permission:
+      check:
+        workflow:
+          organization:
+            org_members:
+              user_id:
+                _eq: X-Hasura-User-Id
+      set:
+        status: running
+        started_at: now()
+      columns:
+        - workflow_id
 event_triggers:
   - name: execute_workflow_run
     definition:

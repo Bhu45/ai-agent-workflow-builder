@@ -1,8 +1,0 @@
-﻿function:
-  name: create_workflow_run_atomic
-  schema: public
-configuration:
-  exposed_as: mutation
-  session_argument: hasura_session
-permissions:
-  - role: user
