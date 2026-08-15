@@ -37,7 +37,7 @@ NEXT_PUBLIC_APP_URL=https://your-production-url.vercel.app
 
 ## 3. Gemini API Setup
 1. Get a Gemini API key from Google AI Studio.
-2. Add it to the `GEMINI_API_KEY` environment variable. The backend uses the `gemini-1.5-flash` model by default.
+2. Add it to the `GEMINI_API_KEY` environment variable. The backend uses the `gemini-2.5-flash` model by default.
 
 ## 4. Local Development
 1. Install dependencies:
