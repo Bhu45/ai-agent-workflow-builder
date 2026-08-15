@@ -11,6 +11,18 @@ import { SUBSCRIBE_WORKFLOW_RUN } from '@/graphql/subscriptions';
 
 const SUB_QUERY = gql`${SUBSCRIBE_WORKFLOW_RUN}`;
 
+const APPROVE_STEP_MUTATION = gql`
+  mutation ApproveStep($workflowRunId: uuid!, $approved: Boolean!) {
+    approveStep(
+      workflow_run_id: $workflowRunId
+      approved: $approved
+    ) {
+      run_id
+      status
+    }
+  }
+`;
+
 export default function WorkflowRunMonitor({ params }: { params: Promise<{ id: string, runId: string }> }) {
   const { id, runId } = use(params);
   const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
@@ -49,20 +61,17 @@ export default function WorkflowRunMonitor({ params }: { params: Promise<{ id: s
     setApproving(true);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/actions/approveStep', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${nhost.auth.getAccessToken()}`
-        },
-        body: JSON.stringify({
-          action: { name: 'approveStep' },
-          input: { workflow_run_id: runId, approved },
-          session_variables: { 'x-hasura-user-id': nhost.auth.getUser()?.id }
-        })
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || 'Approval failed');
+      const { error: graphqlError } = await nhost.graphql.request(
+        APPROVE_STEP_MUTATION,
+        {
+          workflowRunId: runId,
+          approved
+        }
+      );
+      
+      if (graphqlError) {
+        throw new Error(graphqlError[0]?.message || 'Approval failed');
+      }
       // Subscriptions will automatically update the UI!
     } catch (err: any) {
       setErrorMsg(err.message || 'Approval request failed');
