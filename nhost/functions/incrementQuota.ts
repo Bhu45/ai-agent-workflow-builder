@@ -24,7 +24,7 @@ export default async (req: Request, res: Response) => {
   const mutation = `
     mutation IncrementQuota($orgId: uuid!) {
       update_organizations(
-        where: { id: { _eq: $orgId }, quota_used: { _clt: quota_limit } },
+        where: { id: { _eq: $orgId } },
         _inc: { quota_used: 1 }
       ) {
         affected_rows
