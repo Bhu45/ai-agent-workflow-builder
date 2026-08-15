@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     // (We don't await because Event Triggers will time out if LLM takes too long, wait...)
     // Actually, Event Triggers have retry mechanisms and timeouts. The webhook uses maxDuration = 60
     // so we CAN await it!
-    const result = await executeWorkflowFromRun(run.id, run.workflow_id);
+    const initialInput = run.input || {};
+    const result = await executeWorkflowFromRun(run.id, run.workflow_id, initialInput);
     
     return NextResponse.json({ status: 'ok', result });
   } catch (err: any) {

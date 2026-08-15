@@ -85,13 +85,14 @@ export async function incrementQuota(orgId: string): Promise<boolean> {
   return res.success;
 }
 
-export async function createWorkflowRun(workflowId: string, authHeader: string | null) {
+export async function createWorkflowRun(workflowId: string, initialInput: any, authHeader: string | null) {
   // Use native Hasura insert mutation relying on Row-Level Security permissions
   const mutation = `
-    mutation TriggerWorkflowRun($workflowId: uuid!) {
+    mutation TriggerWorkflowRun($workflowId: uuid!, $initialInput: jsonb!) {
       insert_workflow_runs_one(
         object: {
           workflow_id: $workflowId
+          input: $initialInput
         }
       ) {
         id
@@ -100,7 +101,7 @@ export async function createWorkflowRun(workflowId: string, authHeader: string |
     }
   `;
   const client = getUserGraphQLClient(authHeader);
-  const data: any = await client.request(mutation, { workflowId });
+  const data: any = await client.request(mutation, { workflowId, initialInput });
   return data.insert_workflow_runs_one.id;
 }
 

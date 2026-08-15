@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     // Create the workflow run and return immediately to prevent Action timeout.
     // Execution will be handled asynchronously by an Event Trigger on workflow_runs insert.
     console.log(`[Action] Creating workflow run for ${workflowId}...`);
-    const runId = await createWorkflowRun(workflowId, authHeader);
+    const runId = await createWorkflowRun(workflowId, initialInput, authHeader);
 
     console.log(`[Action] Run created successfully. runId=${runId}. Returning to Hasura.`);
 
