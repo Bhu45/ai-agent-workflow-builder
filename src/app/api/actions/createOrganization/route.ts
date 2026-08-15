@@ -29,30 +29,49 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log('[Action] createOrganization mutation stage: START');
+
+    // Generate a UUID server-side to enable a flat multi-mutation transaction in Hasura.
+    // This avoids nested-insert schema compatibility issues while guaranteeing atomic rollback.
+    const orgId = crypto.randomUUID();
+
     const mutation = `
-      mutation CreateOrganization($name: String!, $userId: uuid!) {
-        insert_organizations_one(object: {
-          name: $name,
-          org_members: {
-            data: [{ user_id: $userId, role: "owner" }]
-          }
-        }) {
+      mutation CreateOrgTransaction($orgId: uuid!, $name: String!, $userId: uuid!) {
+        insert_organizations_one(object: { id: $orgId, name: $name }) {
+          id
+        }
+        insert_org_members_one(object: { org_id: $orgId, user_id: $userId, role: "owner" }) {
           id
         }
       }
     `;
 
-    const data: any = await adminGraphQLClient.request(mutation, { name: name.trim(), userId });
-
-    if (!data.insert_organizations_one?.id) {
-      throw new Error('GraphQL mutation succeeded but returned no ID');
+    console.log('[Action] createOrganization mutation stage: EXECUTE_TRANSACTION');
+    const data: any = await adminGraphQLClient.request(mutation, { 
+      orgId, 
+      name: name.trim(), 
+      userId 
+    });
+    
+    if (!data?.insert_organizations_one?.id || !data?.insert_org_members_one?.id) {
+      throw new Error('GraphQL transaction succeeded but returned incomplete IDs');
     }
 
+    console.log('[Action] createOrganization mutation stage: COMPLETE');
+
     return NextResponse.json({
-      id: data.insert_organizations_one.id
+      id: orgId
     });
   } catch (error: any) {
-    console.error('[Action] Error creating organization:', error);
+    console.error('[Action] Error creating organization (Diagnostic):');
+    if (error.response?.errors) {
+      console.error('[Action] Hasura Errors:', JSON.stringify(error.response.errors.map((e: any) => ({
+        message: e.message,
+        extensions: e.extensions
+      }))));
+    } else {
+      console.error('[Action] Non-GraphQL Error:', error.message);
+    }
     return NextResponse.json(
       { message: 'Unable to create organization. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
       { status: 400 }
