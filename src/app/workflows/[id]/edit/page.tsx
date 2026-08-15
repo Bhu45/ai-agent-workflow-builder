@@ -28,6 +28,7 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const [running, setRunning] = useState(false);
   const [runInput, setRunInput] = useState('');
 
@@ -44,8 +45,10 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
         setLoading(true);
         const { data, error } = await nhost.graphql.request(GET_WORKFLOW_BY_ID, { id });
         if (mounted) {
-          if (error) setErrorMsg(Array.isArray(error) ? error[0].message : (error as any).message);
-          else if (data?.workflows_by_pk) {
+          if (error) {
+            setErrorMsg(Array.isArray(error) ? error[0].message : (error as any).message);
+            setNotFound(true);
+          } else if (data?.workflows_by_pk) {
             const wf = data.workflows_by_pk;
             setName(wf.name);
             setDescription(wf.description || '');
@@ -56,6 +59,8 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
               setWebhookEnabled(wh.enabled);
               setWebhookSecret(wh.config?.secret || '');
             }
+          } else {
+            setNotFound(true);
           }
           setLoading(false);
         }
@@ -167,6 +172,18 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
 
   if (authLoading || orgLoading || loading) return <div style={{ padding: '2rem' }}>Loading builder...</div>;
   if (!isAuthenticated || !activeOrg) return null;
+
+  if (notFound) {
+    return (
+      <div className="page" style={{ display: 'flex', justifyContent: 'center', paddingTop: '10vh' }}>
+        <div className="card" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--danger)', marginTop: 0 }}>Access Denied</h2>
+          <p className="muted" style={{ margin: '1rem 0' }}>This workflow does not exist or you do not have permission to access it.</p>
+          <button onClick={() => router.push('/dashboard')} className="button-primary">Return to Dashboard</button>
+        </div>
+      </div>
+    );
+  }
 
   const isOwner = activeOrg.role === 'owner';
   const isEditor = activeOrg.role === 'editor';
