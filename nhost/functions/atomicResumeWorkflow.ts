@@ -46,7 +46,7 @@ export default async (req: Request, res: Response) => {
             organization: {
               org_members: {
                 user_id: { _eq: $userId },
-                role: { _in: ["owner", "editor"] }
+                role: { _in: [owner, editor] }
               }
             }
           }
