@@ -1,27 +1,19 @@
-CREATE TYPE public.create_workflow_run_output AS (
-    run_id uuid
-);
-
 CREATE OR REPLACE FUNCTION public.create_workflow_run_atomic(
-    args json,
-    hasura_session json
+    hasura_session json,
+    wf_id uuid
 )
-RETURNS public.create_workflow_run_output
+RETURNS SETOF public.workflow_runs
 LANGUAGE plpgsql
 VOLATILE
 SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
-    v_workflow_id uuid;
     v_user_id uuid;
     v_org_id uuid;
     v_role text;
     v_run_id uuid;
 BEGIN
-    -- Extract args
-    v_workflow_id := (args->>'wf_id')::uuid;
-    
     -- Extract user_id from hasura session
     v_user_id := (hasura_session->>'x-hasura-user-id')::uuid;
     
@@ -30,7 +22,7 @@ BEGIN
     END IF;
 
     -- Get the workflow's org_id
-    SELECT org_id INTO v_org_id FROM workflows WHERE id = v_workflow_id;
+    SELECT org_id INTO v_org_id FROM workflows WHERE id = wf_id;
     
     IF v_org_id IS NULL THEN
         RAISE EXCEPTION 'Workflow not found';
@@ -52,11 +44,12 @@ BEGIN
 
     -- Create workflow run
     INSERT INTO workflow_runs (workflow_id, status, started_at)
-    VALUES (v_workflow_id, 'running', now())
+    VALUES (wf_id, 'running', now())
     RETURNING id INTO v_run_id;
 
-    RETURN ROW(v_run_id)::public.create_workflow_run_output;
+    RETURN QUERY SELECT * FROM public.workflow_runs WHERE id = v_run_id;
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.create_workflow_run_atomic(json, json) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_workflow_run_atomic(json, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_workflow_run_atomic(json, uuid) TO postgres;

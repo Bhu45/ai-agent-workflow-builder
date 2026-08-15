@@ -89,14 +89,14 @@ export async function createWorkflowRun(workflowId: string, authHeader: string |
   // Use the new PostgreSQL SECURITY DEFINER function via user GraphQL mutation
   const mutation = `
     mutation CreateRunAtomic($workflowId: uuid!) {
-      create_workflow_run_atomic(args: { wf_id: $workflowId }) {
-        run_id
+      create_workflow_run_atomic(wf_id: $workflowId) {
+        id
       }
     }
   `;
   const client = getUserGraphQLClient(authHeader);
   const data: any = await client.request(mutation, { workflowId });
-  return data.create_workflow_run_atomic.run_id;
+  return data.create_workflow_run_atomic[0].id;
 }
 
 export async function createWorkflowRunWebhook(workflowId: string) {
