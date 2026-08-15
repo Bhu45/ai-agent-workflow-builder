@@ -25,8 +25,13 @@ export async function executeWorkflowFromRun(runId: string, workflowId: string, 
     // Find the role of the user who triggered the run
     let userRole: string | null = null;
     if (triggeredBy) {
-      const member = workflow.organization.org_members.find((m: any) => m.user_id === triggeredBy);
-      if (member) userRole = member.role;
+      const members = workflow.organization?.org_members ?? [];
+      const member = members.find((m: any) => m.user_id === triggeredBy);
+      if (triggeredBy && !member) {
+        userRole = null;
+      } else {
+        userRole = member?.role ?? null;
+      }
     }
     
     const orgId = workflow.org_id;

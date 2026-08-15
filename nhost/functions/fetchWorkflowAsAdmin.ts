@@ -28,6 +28,10 @@ export default async (req: Request, res: Response) => {
           id
           quota_limit
           quota_used
+          org_members {
+            user_id
+            role
+          }
         }
         workflow_steps(order_by: { position: asc }) {
           id
