@@ -18,49 +18,75 @@ export type ExecutionContext =
   | { type: 'webhook'; orgId: string };
 
 export async function executeWorkflow(workflowId: string, context: ExecutionContext, initialInput: any = {}) {
+  console.log(`[Engine] executeWorkflow started for workflowId=${workflowId}`);
   let workflow;
   let userRole: string | null = null;
 
-  if (context.type === 'user') {
-    workflow = await fetchWorkflowAsUser(workflowId, context.userId);
-    userRole = workflow?.organization?.org_members?.[0]?.role;
-    if (!userRole || !['owner', 'editor'].includes(userRole)) {
-      throw new Error('Insufficient permissions to execute workflow');
+  try {
+    console.log(`[Engine] Looking up workflow ${workflowId} as context type: ${context.type}`);
+    if (context.type === 'user') {
+      workflow = await fetchWorkflowAsUser(workflowId, context.userId);
+      console.log(`[Engine] fetchWorkflowAsUser completed. Workflow found: ${!!workflow}`);
+      userRole = workflow?.organization?.org_members?.[0]?.role;
+      if (!userRole || !['owner', 'editor'].includes(userRole)) {
+        throw new Error(`Insufficient permissions to execute workflow. Role: ${userRole}`);
+      }
+    } else {
+      workflow = await fetchWorkflowAsAdmin(workflowId);
+      console.log(`[Engine] fetchWorkflowAsAdmin completed. Workflow found: ${!!workflow}`);
+      if (workflow && workflow.org_id !== context.orgId) {
+        throw new Error('Unauthorized org match');
+      }
+      // Webhooks run as system triggers without a specific user role.
+      userRole = null;
     }
-  } else {
-    workflow = await fetchWorkflowAsAdmin(workflowId);
-    if (workflow && workflow.org_id !== context.orgId) {
-      throw new Error('Unauthorized org match');
+
+    if (!workflow) {
+      throw new Error('Unauthorized or workflow not found');
     }
-    // Webhooks run as system triggers without a specific user role.
-    userRole = null;
+
+    const orgId = workflow.org_id;
+
+    // 2. Check quota (Do not increment yet)
+    const hasQuota = await checkQuota(orgId);
+    if (!hasQuota) {
+      throw new Error('Organization quota exceeded');
+    }
+
+    // 3. Create Workflow Run
+    console.log(`[Engine] Creating workflow run for workflow ${workflowId}...`);
+    const runId = await createWorkflowRun(workflowId);
+    console.log(`[Engine] Started workflow run ${runId} for workflow ${workflowId}`);
+
+    // Execution happens asynchronously via Event Trigger. We just return.
+    return { runId, status: 'running' };
+
+  } catch (err: any) {
+    console.error(`[Engine] Fatal error in executeWorkflow for ${workflowId}:`, err.message || err);
+    throw err;
   }
+}
 
-  if (!workflow) {
-    throw new Error('Unauthorized or workflow not found');
-  }
-
-  const orgId = workflow.org_id;
-
-  // 2. Check quota (Do not increment yet)
-  const hasQuota = await checkQuota(orgId);
-  if (!hasQuota) {
-    throw new Error('Organization quota exceeded');
-  }
-
-  // 3. Create Workflow Run
-  const runId = await createWorkflowRun(workflowId);
-  console.log(`[Engine] Started workflow run ${runId} for workflow ${workflowId}`);
-
-  let currentInput = initialInput;
-  const steps = workflow.workflow_steps || [];
-
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
+export async function executeWorkflowFromRun(runId: string, workflowId: string, initialInput: any = {}) {
+  console.log(`[Engine] executeWorkflowFromRun started for runId=${runId}, workflowId=${workflowId}`);
+  
+  try {
+    const workflow = await fetchWorkflowAsAdmin(workflowId);
+    if (!workflow) throw new Error('Workflow not found');
     
-    // Create step_run
-    const stepRunId = await createStepRun(runId, step.id, currentInput);
-    console.log(`[Engine] Executing step ${step.position}: ${step.type}`);
+    const orgId = workflow.org_id;
+
+    let currentInput = initialInput;
+    const steps = workflow.workflow_steps || [];
+    console.log(`[Engine] Workflow has ${steps.length} steps`);
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      
+      // Create step_run
+      console.log(`[Engine] Creating step run for step ${step.id} (position ${step.position}, type ${step.type})...`);
+      const stepRunId = await createStepRun(runId, step.id, currentInput);
+      console.log(`[Engine] Executing step ${step.position}: ${step.type} (run ID: ${stepRunId})`);
 
     try {
       let output: any = null;
@@ -104,17 +130,11 @@ export async function executeWorkflow(workflowId: string, context: ExecutionCont
           return { runId, status: 'paused', message: 'Workflow paused for approval' };
 
         case 'db_write':
-          if (context.type !== 'webhook' && userRole !== 'owner') {
-            throw new Error('Only owners can execute db_write steps');
-          }
           await internalDbWrite(orgId, runId, currentInput);
           output = { success: true };
           break;
 
         case 'notify':
-          if (context.type !== 'webhook' && userRole !== 'owner') {
-            throw new Error('Only owners can execute notify steps');
-          }
           // Real implementation would send email/webhook
           console.log(`[Engine] Notify: ${JSON.stringify(currentInput)}`);
           output = { notified: true };
@@ -145,6 +165,10 @@ export async function executeWorkflow(workflowId: string, context: ExecutionCont
 
   await updateWorkflowRunStatus(runId, 'completed');
   return { runId, status: 'completed', output: currentInput };
+  } catch (err: any) {
+    console.error(`[Engine] Fatal error in executeWorkflow for ${workflowId}:`, err.message || err);
+    throw err;
+  }
 }
 
 export async function resumeWorkflow(runId: string, userId: string, approved: boolean) {

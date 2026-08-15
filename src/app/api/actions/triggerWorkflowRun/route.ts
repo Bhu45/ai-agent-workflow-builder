@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
-import { executeWorkflow } from '@/workflow-engine/engine';
+import { createWorkflowRun } from '@/workflow-engine/api';
 
 export async function POST(req: Request) {
   try {
+    console.log('[Action] triggerWorkflowRun request received');
     const body = await req.json();
 
     // 1. Authenticate Request from Hasura
     const actionSecret = req.headers.get('x-hasura-admin-secret');
     if (actionSecret !== process.env.APP_ACTION_SECRET) {
+      console.error('[Action] triggerWorkflowRun: Unauthorized. Secret mismatch.');
       return NextResponse.json(
         { message: 'Unable to start workflow. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
         { status: 400 }
@@ -21,44 +23,53 @@ export async function POST(req: Request) {
 
     // 2. Validate Inputs
     if (!userId) {
+      console.error('[Action] triggerWorkflowRun: Missing x-hasura-user-id');
       return NextResponse.json(
         { message: 'Unable to start workflow. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
         { status: 400 }
       );
     }
+    console.log(`[Action] Authenticated x-hasura-user-id present: ${userId}`);
 
     if (!workflowId) {
+      console.error('[Action] triggerWorkflowRun: Missing workflow_id');
       return NextResponse.json(
         { message: 'Workflow ID is required.', extensions: { code: 'BAD_REQUEST' } },
         { status: 400 }
       );
     }
-
-    // 3. Execute Workflow Engine
-    // Note: For long-running workflows, this would typically enqueue a job 
-    // and return immediately, but since this is a simple linear engine for this assignment,
-    // we execute it synchronously (or at least start it).
-    // The assignment says "triggerWorkflowRun Action" - if it blocks Vercel's 10s limit,
-    // we could spawn it without awaiting, but Hasura Action expects a response.
-    // We will await it for simplicity, assuming fast LLM responses, or just return the runId immediately and let it process in background.
-    // The requirement says: "Create a workflow_run before executing steps." 
-    // Hasura Actions can be async. We will just start it and return a message. But Node on Vercel 
-    // might kill background promises. 
-    // To be safe for Vercel, we'll await it, unless we reach timeout limits.
-
+    console.log(`[Action] Workflow ID: ${workflowId}`);
+    
     console.log(`[Action] triggerWorkflowRun called for workflow ${workflowId} by user ${userId}`);
 
-    const result = await executeWorkflow(workflowId, { type: 'user', userId }, initialInput);
+    // Create the workflow run and return immediately to prevent Action timeout.
+    // Execution will be handled asynchronously by an Event Trigger on workflow_runs insert.
+    console.log(`[Action] Creating workflow run for ${workflowId}...`);
+    const runId = await createWorkflowRun(workflowId);
 
-    // Hasura Custom Action response matches the GraphQL output type we define in Hasura.
-    // E.g., type TriggerWorkflowRunOutput { run_id: uuid!, status: String! }
+    console.log(`[Action] Run created successfully. runId=${runId}. Returning to Hasura.`);
+
     return NextResponse.json({
-      run_id: result.runId,
-      status: result.status,
+      run_id: runId,
+      status: 'running',
     });
 
-  } catch (error: unknown) {
-    console.error('[Action] Error in triggerWorkflowRun:', error);
+  } catch (error: any) {
+    console.error('[Action] Error in triggerWorkflowRun:', error.message || error);
+    
+    // Log full GraphQL error if available
+    if (error.response?.errors) {
+      console.error('[Action] GraphQL Error Detail:');
+      error.response.errors.forEach((err: any) => {
+        console.error(JSON.stringify({
+          message: err.message,
+          extensions: err.extensions,
+          path: err.path,
+          operationName: error.request?.operationName || 'unknown'
+        }, null, 2));
+      });
+    }
+
     // Keep internal errors in logs, return safe generic message to client
     return NextResponse.json(
       { message: 'Unable to start workflow. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
