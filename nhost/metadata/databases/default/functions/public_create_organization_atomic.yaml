@@ -4,3 +4,5 @@ function:
 configuration:
   exposed_as: mutation
   session_argument: hasura_session
+permissions:
+  - role: user
