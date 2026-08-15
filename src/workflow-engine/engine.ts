@@ -13,60 +13,6 @@ import {
 import { executeLlmCall } from './steps/llm';
 import { executeHttpRequest } from './steps/http';
 
-export type ExecutionContext = 
-  | { type: 'user'; userId: string }
-  | { type: 'webhook'; orgId: string };
-
-export async function executeWorkflow(workflowId: string, context: ExecutionContext, initialInput: any = {}) {
-  console.log(`[Engine] executeWorkflow started for workflowId=${workflowId}`);
-  let workflow;
-  let userRole: string | null = null;
-
-  try {
-    console.log(`[Engine] Looking up workflow ${workflowId} as context type: ${context.type}`);
-    if (context.type === 'user') {
-      workflow = await fetchWorkflowAsUser(workflowId, context.userId);
-      console.log(`[Engine] fetchWorkflowAsUser completed. Workflow found: ${!!workflow}`);
-      userRole = workflow?.organization?.org_members?.[0]?.role;
-      if (!userRole || !['owner', 'editor'].includes(userRole)) {
-        throw new Error(`Insufficient permissions to execute workflow. Role: ${userRole}`);
-      }
-    } else {
-      workflow = await fetchWorkflowAsAdmin(workflowId);
-      console.log(`[Engine] fetchWorkflowAsAdmin completed. Workflow found: ${!!workflow}`);
-      if (workflow && workflow.org_id !== context.orgId) {
-        throw new Error('Unauthorized org match');
-      }
-      // Webhooks run as system triggers without a specific user role.
-      userRole = null;
-    }
-
-    if (!workflow) {
-      throw new Error('Unauthorized or workflow not found');
-    }
-
-    const orgId = workflow.org_id;
-
-    // 2. Check quota (Do not increment yet)
-    const hasQuota = await checkQuota(orgId);
-    if (!hasQuota) {
-      throw new Error('Organization quota exceeded');
-    }
-
-    // 3. Create Workflow Run
-    console.log(`[Engine] Creating workflow run for workflow ${workflowId}...`);
-    const runId = await createWorkflowRun(workflowId);
-    console.log(`[Engine] Started workflow run ${runId} for workflow ${workflowId}`);
-
-    // Execution happens asynchronously via Event Trigger. We just return.
-    return { runId, status: 'running' };
-
-  } catch (err: any) {
-    console.error(`[Engine] Fatal error in executeWorkflow for ${workflowId}:`, err.message || err);
-    throw err;
-  }
-}
-
 export async function executeWorkflowFromRun(runId: string, workflowId: string, initialInput: any = {}) {
   console.log(`[Engine] executeWorkflowFromRun started for runId=${runId}, workflowId=${workflowId}`);
   

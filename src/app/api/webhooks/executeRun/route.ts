@@ -1,5 +1,5 @@
-﻿import { NextResponse } from 'next/server';
-import { executeWorkflow } from '@/workflow-engine/engine';
+import { NextResponse } from 'next/server';
+import { executeWorkflowFromRun } from '@/workflow-engine/engine';
 
 export const maxDuration = 60;
 
@@ -17,9 +17,14 @@ export async function POST(req: Request) {
     }
 
     console.log('[Webhook] executeRun started for runId=' + run.id);
-    // Use the existing engine, but we already have a run created.
-    // Wait, executeWorkflow creates a new run_id! We need to modify engine.ts to support passing an existing run_id!
-    return NextResponse.json({ status: 'ok' });
+    
+    // Execute async using the background executor
+    // (We don't await because Event Triggers will time out if LLM takes too long, wait...)
+    // Actually, Event Triggers have retry mechanisms and timeouts. The webhook uses maxDuration = 60
+    // so we CAN await it!
+    const result = await executeWorkflowFromRun(run.id, run.workflow_id);
+    
+    return NextResponse.json({ status: 'ok', result });
   } catch (err: any) {
     console.error(err);
     return NextResponse.json({ status: 'error' }, { status: 200 });

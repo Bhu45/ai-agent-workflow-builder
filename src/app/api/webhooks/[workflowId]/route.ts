@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { executeWorkflow } from '@/workflow-engine/engine';
+// We don't import executeWorkflow here anymore
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getWebhookTriggerConfig } = require('@/workflow-engine/api');
+const { getWebhookTriggerConfig, createWorkflowRunWebhook } = require('@/workflow-engine/api');
 
 export async function POST(
   req: Request,
@@ -46,13 +46,12 @@ export async function POST(
     // 6. Execute Workflow
     console.log(`[Webhook] Triggering workflow ${workflowId} for org ${orgId}`);
     
-    // We execute synchronously here for the assignment, but in a real webhook handler
-    // we would likely dispatch this to a queue and return 202 immediately.
-    const result = await executeWorkflow(workflowId, { type: 'webhook', orgId }, initialInput);
+    // We just create the run. The execution is handled asynchronously by the Event Trigger.
+    const runId = await createWorkflowRunWebhook(workflowId);
 
     return NextResponse.json({
-      run_id: result.runId,
-      status: result.status,
+      run_id: runId,
+      status: 'running',
     }, { status: 200 });
 
   } catch (error: unknown) {

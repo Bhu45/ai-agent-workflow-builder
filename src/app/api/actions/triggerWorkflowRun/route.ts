@@ -42,10 +42,20 @@ export async function POST(req: Request) {
     
     console.log(`[Action] triggerWorkflowRun called for workflow ${workflowId} by user ${userId}`);
 
+    // Extract forwarded Authorization token
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error('[Action] triggerWorkflowRun: Missing Authorization header from Hasura');
+      return NextResponse.json(
+        { message: 'Unable to start workflow. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
+        { status: 400 }
+      );
+    }
+
     // Create the workflow run and return immediately to prevent Action timeout.
     // Execution will be handled asynchronously by an Event Trigger on workflow_runs insert.
     console.log(`[Action] Creating workflow run for ${workflowId}...`);
-    const runId = await createWorkflowRun(workflowId);
+    const runId = await createWorkflowRun(workflowId, authHeader);
 
     console.log(`[Action] Run created successfully. runId=${runId}. Returning to Hasura.`);
 

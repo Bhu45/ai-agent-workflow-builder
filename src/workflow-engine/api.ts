@@ -5,27 +5,37 @@ const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN
   ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
   : 'http://localhost:8080/v1/graphql';
 
-const adminSecret = process.env.NHOST_ADMIN_SECRET || '';
+const NHOST_FUNCTIONS_URL = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
+  ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.nhost.run/v1/functions`
+  : 'http://localhost:1337/v1/functions';
 
-// Admin client for backend-only updates
-export const adminGraphQLClient = new GraphQLClient(endpoint, {
-  headers: {
-    'x-hasura-admin-secret': adminSecret,
-  },
-});
+async function callNhostFunction(functionName: string, payload: any) {
+  const url = `${NHOST_FUNCTIONS_URL}/${functionName}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.APP_ACTION_SECRET}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[Nhost Function ${functionName}] Error:`, text);
+    throw new Error(`Failed to call ${functionName}: ${res.statusText}`);
+  }
+  return res.json();
+}
 
 // Client configured to impersonate a specific user (Leveraging Hasura Layer 1 RLS)
-export const getUserGraphQLClient = (userId: string) => {
+// Note: This relies on the forwarded Authorization: Bearer token from Hasura Actions.
+export const getUserGraphQLClient = (authHeader: string | null) => {
   return new GraphQLClient(endpoint, {
-    headers: {
-      'x-hasura-admin-secret': adminSecret,
-      'x-hasura-role': 'user',
-      'x-hasura-user-id': userId,
-    },
+    headers: authHeader ? { authorization: authHeader } : {},
   });
 };
 
-export async function fetchWorkflowAsUser(workflowId: string, userId: string) {
+export async function fetchWorkflowAsUser(workflowId: string, authHeader: string | null) {
   const query = `
     query GetWorkflowForExecution($id: uuid!) {
       workflows_by_pk(id: $id) {
@@ -35,8 +45,9 @@ export async function fetchWorkflowAsUser(workflowId: string, userId: string) {
           id
           quota_limit
           quota_used
-          org_members(where: { user_id: { _eq: $userId } }) {
+          org_members {
             role
+            user_id
           }
         }
         workflow_steps(order_by: { position: asc }) {
@@ -48,12 +59,12 @@ export async function fetchWorkflowAsUser(workflowId: string, userId: string) {
       }
     }
   `;
-  const client = getUserGraphQLClient(userId);
+  const client = getUserGraphQLClient(authHeader);
   const data: any = await client.request(query, { id: workflowId });
   return data.workflows_by_pk;
 }
 
-export async function checkQuota(orgId: string): Promise<boolean> {
+export async function checkQuota(orgId: string, authHeader: string | null): Promise<boolean> {
   const query = `
     query CheckQuota($orgId: uuid!) {
       organizations_by_pk(id: $orgId) {
@@ -62,99 +73,55 @@ export async function checkQuota(orgId: string): Promise<boolean> {
       }
     }
   `;
-  const data: any = await adminGraphQLClient.request(query, { orgId });
+  // The user role has read access to organizations
+  const client = getUserGraphQLClient(authHeader);
+  const data: any = await client.request(query, { orgId });
   if (!data.organizations_by_pk) return false;
   return data.organizations_by_pk.quota_used < data.organizations_by_pk.quota_limit;
 }
 
 export async function incrementQuota(orgId: string): Promise<boolean> {
-  const mutation = `
-    mutation IncrementQuota($orgId: uuid!) {
-      update_organizations(
-        where: { id: { _eq: $orgId }, quota_used: { _lt: quota_limit } },
-        _inc: { quota_used: 1 }
-      ) {
-        affected_rows
-      }
-    }
-  `;
-  const data: any = await adminGraphQLClient.request(mutation, { orgId });
-  return data.update_organizations.affected_rows > 0;
+  const res = await callNhostFunction('incrementQuota', { orgId });
+  return res.success;
 }
 
-export async function createWorkflowRun(workflowId: string) {
+export async function createWorkflowRun(workflowId: string, authHeader: string | null) {
+  // Use the new PostgreSQL SECURITY DEFINER function via user GraphQL mutation
   const mutation = `
-    mutation CreateRun($workflowId: uuid!) {
-      insert_workflow_runs_one(object: { workflow_id: $workflowId, status: "running", started_at: "now()" }) {
-        id
+    mutation CreateRunAtomic($workflowId: uuid!) {
+      create_workflow_run_atomic(args: { wf_id: $workflowId }) {
+        run_id
       }
     }
   `;
-  const data: any = await adminGraphQLClient.request(mutation, { workflowId });
-  return data.insert_workflow_runs_one.id;
+  const client = getUserGraphQLClient(authHeader);
+  const data: any = await client.request(mutation, { workflowId });
+  return data.create_workflow_run_atomic.run_id;
+}
+
+export async function createWorkflowRunWebhook(workflowId: string) {
+  const res = await callNhostFunction('createWorkflowRunWebhook', { workflowId });
+  return res.runId;
 }
 
 export async function updateWorkflowRunStatus(runId: string, status: string, error?: string) {
-  const mutation = `
-    mutation UpdateRun($runId: uuid!, $status: String!, $error: String) {
-      update_workflow_runs_by_pk(
-        pk_columns: { id: $runId },
-        _set: { 
-          status: $status, 
-          error: $error,
-          completed_at: ${status === 'completed' || status === 'failed' ? '"now()"' : 'null'}
-        }
-      ) { id }
-    }
-  `;
-  await adminGraphQLClient.request(mutation, { runId, status, error });
+  await callNhostFunction('updateWorkflowRunStatus', { runId, status, error });
 }
 
 export async function createStepRun(runId: string, stepId: string, input: any) {
-  const mutation = `
-    mutation CreateStepRun($runId: uuid!, $stepId: uuid!, $input: jsonb!) {
-      insert_step_runs_one(object: {
-        workflow_run_id: $runId,
-        workflow_step_id: $stepId,
-        status: "running",
-        input: $input,
-        started_at: "now()"
-      }) { id }
-    }
-  `;
-  const data: any = await adminGraphQLClient.request(mutation, { runId, stepId, input });
-  return data.insert_step_runs_one.id;
+  const res = await callNhostFunction('createStepRun', { runId, stepId, input });
+  return res.id;
 }
 
 export async function updateStepRunStatus(stepRunId: string, status: string, output?: any, error?: string) {
-  const mutation = `
-    mutation UpdateStepRun($stepRunId: uuid!, $status: String!, $output: jsonb, $error: String) {
-      update_step_runs_by_pk(
-        pk_columns: { id: $stepRunId },
-        _set: { 
-          status: $status, 
-          output: $output, 
-          error: $error,
-          completed_at: ${status === 'completed' || status === 'failed' || status === 'skipped' ? '"now()"' : 'null'}
-        }
-      ) { id }
-    }
-  `;
-  await adminGraphQLClient.request(mutation, { stepRunId, status, output, error });
+  await callNhostFunction('updateStepRun', { stepRunId, status, output, error });
 }
 
 export async function internalDbWrite(orgId: string, runId: string, dataObj: any) {
-  const mutation = `
-    mutation InternalWrite($orgId: uuid!, $runId: uuid!, $data: jsonb!) {
-      insert_internal_app_data_one(object: { org_id: $orgId, workflow_run_id: $runId, data: $data }) {
-        id
-      }
-    }
-  `;
-  await adminGraphQLClient.request(mutation, { orgId, runId, data: dataObj });
+  await callNhostFunction('internalDbWrite', { orgId, runId, data: dataObj });
 }
 
-export async function getWorkflowRunAsUser(runId: string, userId: string) {
+export async function getWorkflowRunAsUser(runId: string, authHeader: string | null) {
   const query = `
     query GetRun($runId: uuid!) {
       workflow_runs_by_pk(id: $runId) {
@@ -165,8 +132,9 @@ export async function getWorkflowRunAsUser(runId: string, userId: string) {
           org_id
           organization {
             id
-            org_members(where: { user_id: { _eq: $userId } }) {
+            org_members {
               role
+              user_id
             }
           }
           workflow_steps(order_by: { position: asc }) {
@@ -185,111 +153,25 @@ export async function getWorkflowRunAsUser(runId: string, userId: string) {
       }
     }
   `;
-  const client = getUserGraphQLClient(userId);
+  const client = getUserGraphQLClient(authHeader);
   const data: any = await client.request(query, { runId });
   return data.workflow_runs_by_pk;
 }
 
 export async function getWebhookTriggerConfig(workflowId: string) {
-  const query = `
-    query GetWebhookTrigger($workflowId: uuid!) {
-      workflow_triggers(where: { workflow_id: { _eq: $workflowId }, type: { _eq: "webhook" }, enabled: { _eq: true } }) {
-        id
-        config
-        workflow {
-          organization {
-            id
-          }
-        }
-      }
-    }
-  `;
-  const data: any = await adminGraphQLClient.request(query, { workflowId });
-  return data.workflow_triggers[0];
+  // Webhook executor doesn't have user JWT. Using Nhost Function to fetch config.
+  // Actually, I can just create another Nhost function or use fetchWorkflowAsAdmin.
+  // Let's create `getWebhookTriggerConfig` Nhost function.
+  const res = await callNhostFunction('getWebhookTriggerConfig', { workflowId });
+  return res;
 }
 
 export async function fetchWorkflowAsAdmin(workflowId: string) {
-  const query = `
-    query GetWorkflowForExecutionAdmin($id: uuid!) {
-      workflows_by_pk(id: $id) {
-        id
-        org_id
-        organization {
-          id
-          quota_limit
-          quota_used
-        }
-        workflow_steps(order_by: { position: asc }) {
-          id
-          position
-          type
-          config
-        }
-      }
-    }
-  `;
-  const data: any = await adminGraphQLClient.request(query, { id: workflowId });
-  return data.workflows_by_pk;
+  const res = await callNhostFunction('fetchWorkflowAsAdmin', { workflowId });
+  return res;
 }
 
 export async function atomicResumeWorkflow(runId: string, stepRunId: string, userId: string, approved: boolean) {
-  const runStatus = approved ? "running" : "failed";
-  const stepStatus = approved ? "completed" : "failed";
-  const output = {
-    approved,
-    approved_by: userId,
-    approved_at: new Date().toISOString()
-  };
-
-  const mutation = `
-    mutation AtomicApprove(
-      $runId: uuid!, 
-      $stepRunId: uuid!, 
-      $userId: uuid!, 
-      $runStatus: String!, 
-      $stepStatus: String!,
-      $output: jsonb!
-    ) {
-      update_workflow_runs(
-        where: { 
-          id: { _eq: $runId }, 
-          status: { _eq: "paused" },
-          workflow: {
-            organization: {
-              org_members: {
-                user_id: { _eq: $userId },
-                role: { _in: ["owner", "editor"] }
-              }
-            }
-          }
-        },
-        _set: { status: $runStatus }
-      ) {
-        affected_rows
-      }
-      
-      update_step_runs(
-        where: {
-          id: { _eq: $stepRunId },
-          status: { _eq: "paused" },
-          workflow_step: { type: { _eq: "approval_gate" } }
-        },
-        _set: {
-          status: $stepStatus,
-          output: $output,
-          completed_at: "now()"
-        }
-      ) {
-        affected_rows
-      }
-    }
-  `;
-  const data: any = await adminGraphQLClient.request(mutation, {
-    runId, stepRunId, userId, runStatus, stepStatus, output
-  });
-
-  return {
-    runAffected: data.update_workflow_runs?.affected_rows || 0,
-    stepAffected: data.update_step_runs?.affected_rows || 0
-  };
+  const res = await callNhostFunction('atomicResumeWorkflow', { runId, stepRunId, userId, approved });
+  return res;
 }

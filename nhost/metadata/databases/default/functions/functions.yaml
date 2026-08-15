@@ -1,1 +1,2 @@
 - "!include public_create_organization_atomic.yaml"
+- "!include public_create_workflow_run_atomic.yaml"
