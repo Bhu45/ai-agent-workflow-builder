@@ -12,9 +12,7 @@ export default async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
-    ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
-    : 'http://localhost:8080/v1/graphql';
+  const endpoint = process.env.NHOST_GRAPHQL_URL || 'http://localhost:8080/v1/graphql';
     
   const adminSecret = process.env.NHOST_ADMIN_SECRET;
   if (!adminSecret) return res.status(500).json({ error: 'Misconfig' });
@@ -42,7 +40,11 @@ export default async (req: Request, res: Response) => {
     const data: any = await client.request(mutation, { runId, status, error });
     return res.status(200).json({ id: data.update_workflow_runs_by_pk?.id });
   } catch (err: any) {
-    console.error('Error updating workflow run:', err.message || err);
-    return res.status(500).json({ error: 'DB execution failed' });
+    if (err.response && err.response.errors) {
+      console.error('[updateWorkflowRunStatus.ts] GraphQL Error:', JSON.stringify(err.response.errors, null, 2));
+    } else {
+      console.error('[updateWorkflowRunStatus.ts] Execution Error:', err.message || err);
+    }
+    return res.status(500).json({ error: 'Database execution failed' });
   }
 };

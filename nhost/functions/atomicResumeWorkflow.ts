@@ -12,9 +12,7 @@ export default async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
-    ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
-    : 'http://localhost:8080/v1/graphql';
+  const endpoint = process.env.NHOST_GRAPHQL_URL || 'http://localhost:8080/v1/graphql';
     
   const adminSecret = process.env.NHOST_ADMIN_SECRET;
   if (!adminSecret) return res.status(500).json({ error: 'Misconfig' });
@@ -85,7 +83,11 @@ export default async (req: Request, res: Response) => {
       stepAffected: data.update_step_runs?.affected_rows || 0
     });
   } catch (err: any) {
-    console.error('Error in atomic resume:', err.message || err);
-    return res.status(500).json({ error: 'DB execution failed' });
+    if (err.response && err.response.errors) {
+      console.error('[atomicResumeWorkflow.ts] GraphQL Error:', JSON.stringify(err.response.errors, null, 2));
+    } else {
+      console.error('[atomicResumeWorkflow.ts] Execution Error:', err.message || err);
+    }
+    return res.status(500).json({ error: 'Database execution failed' });
   }
 };
