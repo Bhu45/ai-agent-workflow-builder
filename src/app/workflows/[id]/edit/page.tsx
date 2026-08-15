@@ -29,6 +29,7 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [running, setRunning] = useState(false);
+  const [runInput, setRunInput] = useState('');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -101,12 +102,18 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
   };
 
   const handleRun = async () => {
+    const input = runInput.trim();
+    if (!input) {
+      setErrorMsg('Please enter a Run Input before starting the workflow.');
+      return;
+    }
+
     setRunning(true);
     setErrorMsg('');
     try {
       const { data, error } = await nhost.graphql.request(TRIGGER_WORKFLOW_RUN, {
         workflow_id: id,
-        initial_input: {}
+        initial_input: { text: input }
       });
 
       if (error) {
@@ -221,6 +228,19 @@ export default function WorkflowBuilder({ params }: { params: Promise<{ id: stri
               style={{ width: '100%', resize: 'vertical' }} 
             />
           </div>
+        </div>
+
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: 600 }}>Run Input</h3>
+          <p className="muted" style={{ marginBottom: '1rem' }}>This input is passed to the first workflow step when you click Run Now.</p>
+          <textarea
+            value={runInput}
+            onChange={(e) => setRunInput(e.target.value)}
+            disabled={!canEdit}
+            placeholder="Example: Write a professional LinkedIn post about how AI is transforming personal finance."
+            rows={4}
+            style={{ width: '100%', resize: 'vertical' }}
+          />
         </div>
 
         <div className="card" style={{ marginBottom: '2rem', background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
