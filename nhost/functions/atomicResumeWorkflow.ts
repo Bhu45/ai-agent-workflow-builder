@@ -41,7 +41,7 @@ export default async (req: Request, res: Response) => {
       update_workflow_runs(
         where: { 
           id: { _eq: $runId }, 
-          status: { _eq: "paused" },
+          status: { _eq: paused },
           workflow: {
             organization: {
               org_members: {
@@ -59,7 +59,7 @@ export default async (req: Request, res: Response) => {
       update_step_runs(
         where: {
           id: { _eq: $stepRunId },
-          status: { _eq: "paused" },
+          status: { _eq: paused },
           workflow_step: { type: { _eq: "approval_gate" } }
         },
         _set: {
