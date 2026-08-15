@@ -1,0 +1,5 @@
+function:
+  name: create_organization_atomic
+  schema: public
+configuration:
+  exposed_as: mutation

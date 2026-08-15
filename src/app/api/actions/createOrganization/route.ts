@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminGraphQLClient } from '@/workflow-engine/api';
+import { GraphQLClient } from 'graphql-request';
 
 export async function POST(req: Request) {
   try {
@@ -13,12 +13,13 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { name } = body.input || {};
-    const sessionVars = body.session_variables || {};
-    const userId = sessionVars['x-hasura-user-id'];
+    
+    // The JWT is forwarded from Hasura because forward_client_headers: true is set in actions.yaml
+    const authHeader = req.headers.get('authorization');
 
-    if (!userId) {
+    if (!authHeader) {
       return NextResponse.json(
-        { message: 'Unable to create organization. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
+        { message: 'Unable to create organization. Missing authorization.', extensions: { code: 'UNAUTHORIZED' } },
         { status: 400 }
       );
     }
@@ -31,30 +32,31 @@ export async function POST(req: Request) {
 
     console.log('[Action] createOrganization mutation stage: START');
 
-    // Generate a UUID server-side to enable a flat multi-mutation transaction in Hasura.
-    // This avoids nested-insert schema compatibility issues while guaranteeing atomic rollback.
-    const orgId = crypto.randomUUID();
+    const endpoint = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN 
+      ? `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`
+      : 'http://localhost:8080/v1/graphql';
+
+    // Use the user's forwarded JWT token. No NHOST_ADMIN_SECRET is required!
+    const userClient = new GraphQLClient(endpoint, {
+      headers: {
+        authorization: authHeader
+      }
+    });
 
     const mutation = `
-      mutation CreateOrgTransaction($orgId: uuid!, $name: String!, $userId: uuid!) {
-        insert_organizations_one(object: { id: $orgId, name: $name }) {
-          id
-        }
-        insert_org_members_one(object: { org_id: $orgId, user_id: $userId, role: "owner" }) {
+      mutation CallCreateOrgFunction($name: String!) {
+        create_organization_atomic(args: { org_name: $name }) {
           id
         }
       }
     `;
 
-    console.log('[Action] createOrganization mutation stage: EXECUTE_TRANSACTION');
-    const data: any = await adminGraphQLClient.request(mutation, { 
-      orgId, 
-      name: name.trim(), 
-      userId 
-    });
+    console.log('[Action] createOrganization mutation stage: EXECUTE_DB_FUNCTION');
+    const data: any = await userClient.request(mutation, { name: name.trim() });
     
-    if (!data?.insert_organizations_one?.id || !data?.insert_org_members_one?.id) {
-      throw new Error('GraphQL transaction succeeded but returned incomplete IDs');
+    const orgId = data?.create_organization_atomic?.[0]?.id;
+    if (!orgId) {
+      throw new Error('GraphQL transaction succeeded but returned no ID');
     }
 
     console.log('[Action] createOrganization mutation stage: COMPLETE');
