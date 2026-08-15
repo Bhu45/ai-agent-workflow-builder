@@ -8,6 +8,10 @@ type Mutation {
     workflow_run_id: uuid!
     approved: Boolean!
   ): ApproveStepOutput
+
+  createOrganization (
+    name: String!
+  ): CreateOrganizationOutput
 }
 
 type TriggerWorkflowRunOutput {
@@ -18,4 +22,8 @@ type TriggerWorkflowRunOutput {
 type ApproveStepOutput {
   run_id: uuid!
   status: String!
+}
+
+type CreateOrganizationOutput {
+  id: uuid!
 }

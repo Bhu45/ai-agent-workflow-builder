@@ -10,13 +10,40 @@ import { GET_WORKFLOWS_BY_ORG, CREATE_WORKFLOW } from '@/graphql/workflows';
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuthenticationStatus();
-  const { activeOrg, organizations, setActiveOrg, loading: orgLoading } = useOrganization();
+  const { activeOrg, organizations, setActiveOrg, loading: orgLoading, refreshOrgs } = useOrganization();
   const { signOut } = useSignOut();
   const router = useRouter();
   const nhost = useNhostClient();
   type Workflow = { id: string; name: string; description: string };
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
+
+  const [newOrgName, setNewOrgName] = useState('');
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [orgError, setOrgError] = useState('');
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+    setCreatingOrg(true);
+    setOrgError('');
+    try {
+      const res = await nhost.graphql.request(
+        `mutation CreateOrgAction($name: String!) { createOrganization(name: $name) { id } }`,
+        { name: newOrgName }
+      );
+      if (res.error) {
+        const errMsg = Array.isArray(res.error) ? res.error[0]?.message : (res.error as any).message;
+        throw new Error(errMsg || 'Failed to create organization');
+      }
+      await refreshOrgs();
+      setNewOrgName('');
+    } catch (err: any) {
+      setOrgError(err.message || 'An error occurred');
+    } finally {
+      setCreatingOrg(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -65,7 +92,28 @@ export default function Dashboard() {
       <section style={{ marginTop: '2rem', padding: '1rem', background: '#f5f5f5', borderRadius: '4px' }}>
         <h2>Organization Context</h2>
         {organizations.length === 0 ? (
-          <p>You do not belong to any organizations yet.</p>
+          <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginTop: '2rem', textAlign: 'center' }}>
+            <h2 style={{ marginBottom: '1rem' }}>Welcome to AI Workflow Builder!</h2>
+            <p style={{ color: '#666', marginBottom: '2rem' }}>You do not belong to any organizations yet. Create one to get started.</p>
+            <form onSubmit={handleCreateOrg} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '300px', margin: '0 auto' }}>
+              <input 
+                type="text" 
+                placeholder="Organization Name" 
+                value={newOrgName} 
+                onChange={(e) => setNewOrgName(e.target.value)}
+                required
+                style={{ padding: '0.75rem', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+              <button 
+                type="submit" 
+                disabled={creatingOrg}
+                style={{ padding: '0.75rem', background: '#2196f3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                {creatingOrg ? 'Creating...' : 'Create Organization'}
+              </button>
+              {orgError && <p style={{ color: 'red', fontSize: '0.85rem' }}>{orgError}</p>}
+            </form>
+          </div>
         ) : (
           <div>
             <label style={{ marginRight: '1rem' }}>Switch Organization:</label>

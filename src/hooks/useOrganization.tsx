@@ -16,6 +16,7 @@ type OrgContextType = {
   setActiveOrg: (org: Organization | null) => void;
   organizations: Organization[];
   loading: boolean;
+  refreshOrgs: () => Promise<void>;
 };
 
 const OrgContext = createContext<OrgContextType>({
@@ -23,6 +24,7 @@ const OrgContext = createContext<OrgContextType>({
   setActiveOrg: () => {},
   organizations: [],
   loading: true,
+  refreshOrgs: async () => {},
 });
 
 const GET_USER_ORGS = `
@@ -47,38 +49,34 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   const [orgData, setOrgData] = useState<Organization[]>([]);
   const [queryLoading, setQueryLoading] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    async function fetchOrgs() {
-      if (isAuthenticated && user?.id) {
-        setQueryLoading(true);
-        const { data, error } = await nhost.graphql.request(GET_USER_ORGS, { userId: user.id });
-        if (mounted) {
-          if (!error && data?.org_members) {
-            type OrgMemberResponse = {
-              role: string;
-              organization: { id: string; name: string; quota_limit: number; quota_used: number };
-            };
-            const parsedOrgs = data.org_members.map((m: OrgMemberResponse) => ({
-              id: m.organization.id,
-              name: m.organization.name,
-              role: m.role,
-              quota_limit: m.organization.quota_limit,
-              quota_used: m.organization.quota_used,
-            }));
-            setOrgData(parsedOrgs);
-            if (parsedOrgs.length > 0) {
-              setActiveOrg(parsedOrgs[0]);
-            }
-          }
-          setQueryLoading(false);
+  const fetchOrgs = async () => {
+    if (isAuthenticated && user?.id) {
+      setQueryLoading(true);
+      const { data, error } = await nhost.graphql.request(GET_USER_ORGS, { userId: user.id });
+      if (!error && data?.org_members) {
+        type OrgMemberResponse = {
+          role: string;
+          organization: { id: string; name: string; quota_limit: number; quota_used: number };
+        };
+        const parsedOrgs = data.org_members.map((m: OrgMemberResponse) => ({
+          id: m.organization.id,
+          name: m.organization.name,
+          role: m.role,
+          quota_limit: m.organization.quota_limit,
+          quota_used: m.organization.quota_used,
+        }));
+        setOrgData(parsedOrgs);
+        if (parsedOrgs.length > 0 && !activeOrg) {
+          setActiveOrg(parsedOrgs[0]);
         }
       }
+      setQueryLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchOrgs();
-    return () => {
-      mounted = false;
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id, nhost.graphql]);
 
   const organizations = useMemo(() => orgData, [orgData]);
@@ -90,6 +88,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         setActiveOrg,
         organizations,
         loading: authLoading || queryLoading,
+        refreshOrgs: fetchOrgs,
       }}
     >
       {children}

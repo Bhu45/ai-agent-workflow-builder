@@ -21,10 +21,22 @@ actions:
           value_from_env: NHOST_ACTION_SECRET
     permissions:
       - role: user
+  - name: createOrganization
+    definition:
+      kind: synchronous
+      handler: "{{NEXT_PUBLIC_APP_URL}}/api/actions/createOrganization"
+      output_type: CreateOrganizationOutput
+      forward_client_headers: true
+      headers:
+        - name: x-hasura-admin-secret
+          value_from_env: NHOST_ACTION_SECRET
+    permissions:
+      - role: user
 custom_types:
   enums: []
   input_objects: []
   objects:
     - name: TriggerWorkflowRunOutput
     - name: ApproveStepOutput
+    - name: CreateOrganizationOutput
   scalars: []
