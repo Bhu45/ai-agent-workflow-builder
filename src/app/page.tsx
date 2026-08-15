@@ -19,8 +19,8 @@ export default function Home() {
   }, [isLoading, isAuthenticated, router]);
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-      <p style={{ color: '#666' }}>Loading...</p>
+    <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <p className="muted">Loading...</p>
     </div>
   );
 }

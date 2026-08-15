@@ -20,37 +20,39 @@ export default function SignUpPage() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', fontFamily: 'sans-serif' }}>
-      <h1>Sign Up</h1>
-      <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
-          />
-        </div>
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
-          />
-        </div>
-        <button type="submit" disabled={isLoading} style={{ padding: '0.75rem', cursor: 'pointer' }}>
-          {isLoading ? 'Loading...' : 'Sign Up'}
-        </button>
-      </form>
-      {isError && <p style={{ color: 'red' }}>{error?.message}</p>}
-      <p style={{ marginTop: '1rem' }}>
-        Already have an account? <Link href="/login">Login</Link>
-      </p>
+    <div className="page" style={{ display: 'flex', justifyContent: 'center', paddingTop: '10vh' }}>
+      <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+        <h1 style={{ marginTop: 0, marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 600 }}>Sign Up</h1>
+        <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label className="label">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div>
+            <label className="label">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ width: '100%' }}
+            />
+          </div>
+          <button type="submit" disabled={isLoading} className="button-primary" style={{ marginTop: '0.5rem' }}>
+            {isLoading ? 'Loading...' : 'Sign Up'}
+          </button>
+        </form>
+        {isError && <div className="alert-error" style={{ marginTop: '1rem' }}>{error?.message}</div>}
+        <p className="muted" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          Already have an account? <Link href="/login" style={{ color: 'var(--primary)', fontWeight: 500 }}>Login</Link>
+        </p>
+      </div>
     </div>
   );
 }

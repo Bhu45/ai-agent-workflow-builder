@@ -82,130 +82,136 @@ export default function WorkflowRunMonitor({ params }: { params: Promise<{ id: s
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <button onClick={() => router.push(`/workflows/${id}/edit`)} style={{ marginBottom: '1rem', cursor: 'pointer' }}>&larr; Back to Builder</button>
-          <h1>Run Execution Monitor</h1>
-          <p>
-            Run ID: <code>{runId}</code><br/>
-            Status: <strong style={{ color: getStatusColor(run.status) }}>{run.status.toUpperCase()}</strong>
-          </p>
-        </div>
-      </header>
+    <div className="page">
+      <div className="container" style={{ maxWidth: '800px' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <button onClick={() => router.push(`/workflows/${id}/edit`)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: 0, marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Back to Builder
+            </button>
+            <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 600 }}>Run Execution Monitor</h1>
+            <p className="muted" style={{ margin: 0 }}>
+              Run ID: <code style={{ color: 'var(--text)' }}>{runId}</code><br/>
+              Status: <strong style={{ color: getStatusColor(run.status) }}>{run.status.toUpperCase()}</strong>
+            </p>
+          </div>
+        </header>
 
-      {errorMsg && (
-        <div style={{ padding: '1rem', background: '#ffebee', color: '#c62828', borderRadius: '4px', marginBottom: '2rem' }}>
-          {errorMsg}
-        </div>
-      )}
+        {errorMsg && (
+          <div className="alert-error" style={{ marginBottom: '2rem' }}>
+            {errorMsg}
+          </div>
+        )}
 
-      {run.error && (
-        <div style={{ padding: '1rem', background: '#ffebee', borderLeft: '4px solid #c62828', marginBottom: '2rem' }}>
-          <strong>Workflow Error:</strong> {run.error}
-        </div>
-      )}
+        {run.error && (
+          <div className="alert-error" style={{ marginBottom: '2rem' }}>
+            <strong>Workflow Error:</strong> {run.error}
+          </div>
+        )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-        {run.step_runs && run.step_runs.map((stepRun: any, index: number) => {
-          const isLast = index === run.step_runs.length - 1;
-          const isApprovalPaused = stepRun.status === 'paused' && stepRun.workflow_step?.type === 'approval_gate';
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          {run.step_runs && run.step_runs.map((stepRun: any, index: number) => {
+            const isLast = index === run.step_runs.length - 1;
+            const isApprovalPaused = stepRun.status === 'paused' && stepRun.workflow_step?.type === 'approval_gate';
 
-          return (
-            <div key={stepRun.id} style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ 
-                border: `2px solid ${getStatusColor(stepRun.status)}`, 
-                borderRadius: '8px', 
-                padding: '1.5rem', 
-                background: '#fff',
-                position: 'relative',
-                boxShadow: stepRun.status === 'running' ? '0 0 10px rgba(33,150,243,0.3)' : 'none'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div>
-                    <strong style={{ fontSize: '1.2rem', display: 'block', marginBottom: '0.25rem' }}>
-                      Step {stepRun.workflow_step?.position}: {stepRun.workflow_step?.type.toUpperCase().replace('_', ' ')}
-                    </strong>
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      background: getStatusColor(stepRun.status), 
-                      color: '#fff', 
-                      padding: '0.2rem 0.5rem', 
-                      borderRadius: '12px' 
-                    }}>
-                      {stepRun.status}
-                    </span>
+            return (
+              <div key={stepRun.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card" style={{ 
+                  border: `2px solid ${getStatusColor(stepRun.status)}`, 
+                  padding: '1.5rem', 
+                  position: 'relative',
+                  boxShadow: stepRun.status === 'running' ? '0 0 10px rgba(33,150,243,0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div>
+                      <strong style={{ fontSize: '1.2rem', display: 'block', marginBottom: '0.25rem' }}>
+                        Step {stepRun.workflow_step?.position}: {stepRun.workflow_step?.type.toUpperCase().replace('_', ' ')}
+                      </strong>
+                      <span style={{ 
+                        fontSize: '0.8rem', 
+                        background: getStatusColor(stepRun.status), 
+                        color: '#fff', 
+                        padding: '0.2rem 0.5rem', 
+                        borderRadius: '12px' 
+                      }}>
+                        {stepRun.status}
+                      </span>
+                    </div>
+                    <div className="muted" style={{ textAlign: 'right', fontSize: '0.8rem' }}>
+                      {stepRun.started_at && <div>Started: {new Date(stepRun.started_at).toLocaleTimeString()}</div>}
+                      {stepRun.completed_at && <div>Finished: {new Date(stepRun.completed_at).toLocaleTimeString()}</div>}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#666' }}>
-                    {stepRun.started_at && <div>Started: {new Date(stepRun.started_at).toLocaleTimeString()}</div>}
-                    {stepRun.completed_at && <div>Finished: {new Date(stepRun.completed_at).toLocaleTimeString()}</div>}
-                  </div>
+
+                  {stepRun.error && (
+                    <div className="alert-error" style={{ marginTop: '1rem' }}>
+                      <strong>Error:</strong> {stepRun.error}
+                    </div>
+                  )}
+
+                  {stepRun.output && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <strong style={{ fontSize: '0.9rem' }}>Output:</strong>
+                      <pre style={{ 
+                        background: '#0f172a', 
+                        color: '#f8fafc',
+                        padding: '1rem', 
+                        borderRadius: '0.375rem', 
+                        overflowX: 'auto',
+                        fontSize: '0.85rem',
+                        marginTop: '0.5rem',
+                        maxHeight: '300px'
+                      }}>
+                        {JSON.stringify(stepRun.output, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {isApprovalPaused && (
+                    <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', textAlign: 'center' }}>
+                      <h3 style={{ margin: '0 0 1rem 0', color: '#b45309' }}>Paused — awaiting approval</h3>
+                      {!isOwnerOrEditor ? (
+                        <p className="muted">You do not have permission to approve this step. Waiting for Owner or Editor.</p>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => handleApprove(false)} 
+                            disabled={approving}
+                            className="button-secondary"
+                            style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                          >
+                            Deny
+                          </button>
+                          <button 
+                            onClick={() => handleApprove(true)} 
+                            disabled={approving}
+                            className="button-primary"
+                            style={{ background: 'var(--success)' }}
+                          >
+                            {approving ? 'Processing...' : 'Approve'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {stepRun.error && (
-                  <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff3f3', border: '1px solid #ffcdd2', borderRadius: '4px', color: '#c62828', fontSize: '0.9rem' }}>
-                    <strong>Error:</strong> {stepRun.error}
-                  </div>
-                )}
-
-                {stepRun.output && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <strong style={{ fontSize: '0.9rem' }}>Output:</strong>
-                    <pre style={{ 
-                      background: '#f5f5f5', 
-                      padding: '1rem', 
-                      borderRadius: '4px', 
-                      overflowX: 'auto',
-                      fontSize: '0.85rem',
-                      marginTop: '0.5rem',
-                      maxHeight: '300px'
-                    }}>
-                      {JSON.stringify(stepRun.output, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {isApprovalPaused && (
-                  <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: '#fff8e1', border: '1px solid #ffecb3', borderRadius: '8px', textAlign: 'center' }}>
-                    <h3 style={{ margin: '0 0 1rem 0', color: '#ff8f00' }}>Paused — awaiting approval</h3>
-                    {!isOwnerOrEditor ? (
-                      <p style={{ color: '#666' }}>You do not have permission to approve this step. Waiting for Owner or Editor.</p>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <button 
-                          onClick={() => handleApprove(false)} 
-                          disabled={approving}
-                          style={{ padding: '0.75rem 2rem', background: '#fff', border: '1px solid #f44336', color: '#f44336', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          Deny
-                        </button>
-                        <button 
-                          onClick={() => handleApprove(true)} 
-                          disabled={approving}
-                          style={{ padding: '0.75rem 2rem', background: '#4caf50', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          {approving ? 'Processing...' : 'Approve'}
-                        </button>
-                      </div>
-                    )}
+                
+                {!isLast && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}>
+                    <div style={{ width: '4px', height: '30px', background: 'var(--border)' }}></div>
                   </div>
                 )}
               </div>
-              
-              {!isLast && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}>
-                  <div style={{ width: '4px', height: '30px', background: '#ccc' }}></div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
 
-        {(!run.step_runs || run.step_runs.length === 0) && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            {run.status === 'running' ? 'Initializing first step...' : 'No steps recorded.'}
-          </div>
-        )}
+          {(!run.step_runs || run.step_runs.length === 0) && (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p className="muted">{run.status === 'running' ? 'Initializing first step...' : 'No steps recorded.'}</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
