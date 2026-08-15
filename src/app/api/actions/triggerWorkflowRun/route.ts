@@ -8,7 +8,10 @@ export async function POST(req: Request) {
     // 1. Authenticate Request from Hasura
     const actionSecret = req.headers.get('x-hasura-admin-secret');
     if (actionSecret !== process.env.APP_ACTION_SECRET) {
-      return NextResponse.json({ message: 'Unauthorized: Invalid action secret' }, { status: 401 });
+      return NextResponse.json(
+        { message: 'Unable to start workflow. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
+        { status: 400 }
+      );
     }
 
     // 2. Extract Hasura Action Payload
@@ -18,11 +21,17 @@ export async function POST(req: Request) {
 
     // 2. Validate Inputs
     if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized: Missing x-hasura-user-id' }, { status: 401 });
+      return NextResponse.json(
+        { message: 'Unable to start workflow. Please try again.', extensions: { code: 'UNAUTHORIZED' } },
+        { status: 400 }
+      );
     }
 
     if (!workflowId) {
-      return NextResponse.json({ message: 'Bad Request: Missing workflow_id' }, { status: 400 });
+      return NextResponse.json(
+        { message: 'Workflow ID is required.', extensions: { code: 'BAD_REQUEST' } },
+        { status: 400 }
+      );
     }
 
     // 3. Execute Workflow Engine
@@ -50,7 +59,10 @@ export async function POST(req: Request) {
 
   } catch (error: unknown) {
     console.error('[Action] Error in triggerWorkflowRun:', error);
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ message: message || 'Internal Server Error' }, { status: 400 });
+    // Keep internal errors in logs, return safe generic message to client
+    return NextResponse.json(
+      { message: 'Unable to start workflow. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
+      { status: 400 }
+    );
   }
 }
