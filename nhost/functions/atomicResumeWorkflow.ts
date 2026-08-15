@@ -34,8 +34,8 @@ export default async (req: Request, res: Response) => {
       $runId: uuid!, 
       $stepRunId: uuid!, 
       $userId: uuid!, 
-      $runStatus: String!, 
-      $stepStatus: String!,
+      $runStatus: run_statuses_enum!, 
+      $stepStatus: run_statuses_enum!,
       $output: jsonb!
     ) {
       update_workflow_runs(
@@ -84,10 +84,13 @@ export default async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     if (err.response && err.response.errors) {
-      console.error('[atomicResumeWorkflow.ts] GraphQL Error:', JSON.stringify(err.response.errors, null, 2));
+      const errorMsg = JSON.stringify(err.response.errors, null, 2);
+      console.error('[atomicResumeWorkflow.ts] GraphQL Error:', errorMsg);
+      return res.status(500).json({ error: 'Database execution failed: ' + errorMsg });
     } else {
-      console.error('[atomicResumeWorkflow.ts] Execution Error:', err.message || err);
+      const errorMsg = err.message || err;
+      console.error('[atomicResumeWorkflow.ts] Execution Error:', errorMsg);
+      return res.status(500).json({ error: 'Database execution failed: ' + errorMsg });
     }
-    return res.status(500).json({ error: 'Database execution failed' });
   }
 };
