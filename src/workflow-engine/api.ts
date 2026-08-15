@@ -186,21 +186,6 @@ export async function fetchWorkflowAsAdmin(workflowId: string) {
   return res;
 }
 
-export async function fetchWorkflowRunAsAdmin(runId: string) {
-  const query = `
-    query GetRunAdmin($runId: uuid!) {
-      workflow_runs_by_pk(id: $runId) {
-        id
-        triggered_by
-      }
-    }
-  `;
-  const client = new GraphQLClient(endpoint, {
-    headers: { 'x-hasura-admin-secret': process.env.APP_ACTION_SECRET || '' },
-  });
-  const data: any = await client.request(query, { runId });
-  return data.workflow_runs_by_pk;
-}
 
 export async function atomicResumeWorkflow(runId: string, stepRunId: string, userId: string, approved: boolean) {
   const res = await callNhostFunction('atomicResumeWorkflow', { runId, stepRunId, userId, approved });

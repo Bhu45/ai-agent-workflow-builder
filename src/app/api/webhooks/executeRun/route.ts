@@ -23,7 +23,8 @@ export async function POST(req: Request) {
     // Actually, Event Triggers have retry mechanisms and timeouts. The webhook uses maxDuration = 60
     // so we CAN await it!
     const initialInput = run.input || {};
-    const result = await executeWorkflowFromRun(run.id, run.workflow_id, initialInput);
+    const triggeredBy = run.triggered_by ?? null;
+    const result = await executeWorkflowFromRun(run.id, run.workflow_id, initialInput, triggeredBy);
     
     return NextResponse.json({ status: 'ok', result });
   } catch (err: any) {

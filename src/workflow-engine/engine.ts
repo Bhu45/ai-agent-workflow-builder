@@ -9,22 +9,18 @@ import {
   createStepRun,
   updateStepRunStatus,
   internalDbWrite,
-  fetchWorkflowRunAsAdmin,
   internalNotify
 } from './api';
 import { executeLlmCall } from './steps/llm';
 import { executeHttpRequest } from './steps/http';
 import { GraphQLClient } from 'graphql-request';
 
-export async function executeWorkflowFromRun(runId: string, workflowId: string, initialInput: any = {}) {
-  console.log(`[Engine] executeWorkflowFromRun started for runId=${runId}, workflowId=${workflowId}`);
+export async function executeWorkflowFromRun(runId: string, workflowId: string, initialInput: any = {}, triggeredBy: string | null = null) {
+  console.log(`[Engine] executeWorkflowFromRun started for runId=${runId}, workflowId=${workflowId}, triggeredBy=${triggeredBy}`);
   
   try {
     const workflow = await fetchWorkflowAsAdmin(workflowId);
     if (!workflow) throw new Error('Workflow not found');
-    
-    const run = await fetchWorkflowRunAsAdmin(runId);
-    const triggeredBy = run?.triggered_by;
     
     // Find the role of the user who triggered the run
     let userRole: string | null = null;
