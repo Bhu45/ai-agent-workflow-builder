@@ -47,7 +47,7 @@ export async function POST(
     console.log(`[Webhook] Triggering workflow ${workflowId} for org ${orgId}`);
     
     // We just create the run. The execution is handled asynchronously by the Event Trigger.
-    const runId = await createWorkflowRunWebhook(workflowId);
+    const runId = await createWorkflowRunWebhook(workflowId, initialInput);
 
     return NextResponse.json({
       run_id: runId,

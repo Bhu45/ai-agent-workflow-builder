@@ -33,19 +33,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const authHeader = req.headers.get('authorization');
+
     console.log(`[Action] approveStep called for run ${runId} by user ${userId}. Approved: ${approved}`);
 
-    const result = await resumeWorkflow(runId, userId, approved);
+    const result = await resumeWorkflow(runId, userId, approved, authHeader);
 
     return NextResponse.json({
       run_id: result.runId,
       status: result.status,
     });
 
-  } catch (error: unknown) {
-    console.error('[Action] Error in approveStep:', error);
+  } catch (error: any) {
+    console.error('[Action] Error in approveStep:', error.message || error);
     return NextResponse.json(
-      { message: 'Unable to approve step. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
+      { message: error.message || 'Unable to approve step. Please try again.', extensions: { code: 'INTERNAL_ERROR' } },
       { status: 400 }
     );
   }

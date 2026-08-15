@@ -33,7 +33,7 @@ insert_permissions:
                 - user_id:
                     _eq: X-Hasura-User-Id
                 - role:
-                    _in: ["owner", "editor"]
+                    _eq: "owner"
       columns:
         - workflow_id
         - type
@@ -54,7 +54,7 @@ update_permissions:
                 - user_id:
                     _eq: X-Hasura-User-Id
                 - role:
-                    _in: ["owner", "editor"]
+                    _eq: "owner"
       check: null
 delete_permissions:
   - role: user
@@ -67,4 +67,4 @@ delete_permissions:
                 - user_id:
                     _eq: X-Hasura-User-Id
                 - role:
-                    _in: ["owner", "editor"]
+                    _eq: "owner"

@@ -52,10 +52,31 @@ export async function POST(req: Request) {
       );
     }
 
+    const { fetchWorkflowAsUser, checkQuota } = require('@/workflow-engine/api');
+    
+    // 3. Enforce Quota BEFORE creating run
+    const workflow = await fetchWorkflowAsUser(workflowId, authHeader);
+    if (!workflow) {
+      return NextResponse.json(
+        { message: 'Workflow not found or unauthorized.', extensions: { code: 'NOT_FOUND' } },
+        { status: 404 }
+      );
+    }
+
+    const orgId = workflow.org_id;
+    const hasQuota = await checkQuota(orgId, authHeader);
+    if (!hasQuota) {
+      console.error(`[Action] triggerWorkflowRun: Quota exhausted for org ${orgId}`);
+      return NextResponse.json(
+        { message: 'Organization quota exhausted.', extensions: { code: 'QUOTA_EXHAUSTED' } },
+        { status: 400 }
+      );
+    }
+
     // Create the workflow run and return immediately to prevent Action timeout.
     // Execution will be handled asynchronously by an Event Trigger on workflow_runs insert.
     console.log(`[Action] Creating workflow run for ${workflowId}...`);
-    const runId = await createWorkflowRun(workflowId, initialInput, authHeader);
+    const runId = await createWorkflowRun(workflowId, initialInput, userId, authHeader);
 
     console.log(`[Action] Run created successfully. runId=${runId}. Returning to Hasura.`);
 

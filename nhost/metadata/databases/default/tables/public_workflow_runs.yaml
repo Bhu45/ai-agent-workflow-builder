@@ -25,6 +25,7 @@ select_permissions:
         - error
         - created_at
         - input
+        - triggered_by
 
       filter:
         workflow:
@@ -57,6 +58,7 @@ insert_permissions:
       columns:
         - workflow_id
         - input
+        - triggered_by
 event_triggers:
   - name: execute_workflow_run
     definition:

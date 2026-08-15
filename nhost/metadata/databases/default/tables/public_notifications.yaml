@@ -1,0 +1,53 @@
+table:
+  name: notifications
+  schema: public
+object_relationships:
+  - name: organization
+    using:
+      foreign_key_constraint_on: org_id
+  - name: workflow_run
+    using:
+      foreign_key_constraint_on: run_id
+insert_permissions:
+  - role: user
+    permission:
+      check:
+        organization:
+          org_members:
+            _and:
+              - user_id:
+                  _eq: X-Hasura-User-Id
+              - role:
+                  _eq: owner
+      columns:
+        - run_id
+        - org_id
+        - message
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - run_id
+        - org_id
+        - message
+        - created_at
+      filter:
+        organization:
+          org_members:
+            user_id:
+              _eq: X-Hasura-User-Id
+event_triggers:
+  - name: send_notification
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+    retry_conf:
+      interval_sec: 10
+      num_retries: 0
+      timeout_sec: 60
+    webhook: "{{NEXT_PUBLIC_APP_URL}}/api/webhooks/notify"
+    headers:
+      - name: x-hasura-admin-secret
+        value_from_env: APP_ACTION_SECRET

@@ -27,14 +27,22 @@ insert_permissions:
   - role: user
     permission:
       check:
-        workflow:
-          organization:
-            org_members:
-              _and:
-                - user_id:
-                    _eq: X-Hasura-User-Id
-                - role:
-                    _in: ["owner", "editor"]
+        _or:
+          - _and:
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "owner" }
+          - _and:
+              - type: { _in: ["llm_call", "http_request", "conditional_branch", "approval_gate"] }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "editor" }
       columns:
         - workflow_id
         - position
@@ -48,24 +56,40 @@ update_permissions:
         - type
         - config
       filter:
-        workflow:
-          organization:
-            org_members:
-              _and:
-                - user_id:
-                    _eq: X-Hasura-User-Id
-                - role:
-                    _in: ["owner", "editor"]
+        _or:
+          - _and:
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "owner" }
+          - _and:
+              - type: { _in: ["llm_call", "http_request", "conditional_branch", "approval_gate"] }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "editor" }
       check: null
 delete_permissions:
   - role: user
     permission:
       filter:
-        workflow:
-          organization:
-            org_members:
-              _and:
-                - user_id:
-                    _eq: X-Hasura-User-Id
-                - role:
-                    _in: ["owner", "editor"]
+        _or:
+          - _and:
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "owner" }
+          - _and:
+              - type: { _in: ["llm_call", "http_request", "conditional_branch", "approval_gate"] }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: "editor" }

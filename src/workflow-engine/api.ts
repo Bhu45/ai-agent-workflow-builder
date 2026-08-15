@@ -85,14 +85,15 @@ export async function incrementQuota(orgId: string): Promise<boolean> {
   return res.success;
 }
 
-export async function createWorkflowRun(workflowId: string, initialInput: any, authHeader: string | null) {
+export async function createWorkflowRun(workflowId: string, initialInput: any, userId: string, authHeader: string | null) {
   // Use native Hasura insert mutation relying on Row-Level Security permissions
   const mutation = `
-    mutation TriggerWorkflowRun($workflowId: uuid!, $initialInput: jsonb!) {
+    mutation TriggerWorkflowRun($workflowId: uuid!, $initialInput: jsonb!, $userId: uuid!) {
       insert_workflow_runs_one(
         object: {
           workflow_id: $workflowId
           input: $initialInput
+          triggered_by: $userId
         }
       ) {
         id
@@ -101,12 +102,12 @@ export async function createWorkflowRun(workflowId: string, initialInput: any, a
     }
   `;
   const client = getUserGraphQLClient(authHeader);
-  const data: any = await client.request(mutation, { workflowId, initialInput });
+  const data: any = await client.request(mutation, { workflowId, initialInput, userId });
   return data.insert_workflow_runs_one.id;
 }
 
-export async function createWorkflowRunWebhook(workflowId: string) {
-  const res = await callNhostFunction('createWorkflowRunWebhook', { workflowId });
+export async function createWorkflowRunWebhook(workflowId: string, initialInput: any) {
+  const res = await callNhostFunction('createWorkflowRunWebhook', { workflowId, initialInput });
   return res.runId;
 }
 
@@ -125,6 +126,10 @@ export async function updateStepRunStatus(stepRunId: string, status: string, out
 
 export async function internalDbWrite(orgId: string, runId: string, dataObj: any) {
   await callNhostFunction('internalDbWrite', { orgId, runId, data: dataObj });
+}
+
+export async function internalNotify(orgId: string, runId: string, dataObj: any) {
+  await callNhostFunction('internalNotify', { orgId, runId, data: dataObj });
 }
 
 export async function getWorkflowRunAsUser(runId: string, authHeader: string | null) {
@@ -175,6 +180,22 @@ export async function getWebhookTriggerConfig(workflowId: string) {
 export async function fetchWorkflowAsAdmin(workflowId: string) {
   const res = await callNhostFunction('fetchWorkflowAsAdmin', { workflowId });
   return res;
+}
+
+export async function fetchWorkflowRunAsAdmin(runId: string) {
+  const query = `
+    query GetRunAdmin($runId: uuid!) {
+      workflow_runs_by_pk(id: $runId) {
+        id
+        triggered_by
+      }
+    }
+  `;
+  const client = new GraphQLClient(endpoint, {
+    headers: { 'x-hasura-admin-secret': process.env.APP_ACTION_SECRET || '' },
+  });
+  const data: any = await client.request(query, { runId });
+  return data.workflow_runs_by_pk;
 }
 
 export async function atomicResumeWorkflow(runId: string, stepRunId: string, userId: string, approved: boolean) {

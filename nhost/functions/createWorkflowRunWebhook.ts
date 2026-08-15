@@ -7,7 +7,7 @@ export default async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { workflowId } = req.body;
+  const { workflowId, initialInput } = req.body;
   if (!workflowId) return res.status(400).json({ error: 'Missing required fields' });
 
   const endpoint = process.env.NHOST_GRAPHQL_URL || 'http://localhost:8080/v1/graphql';
@@ -20,15 +20,15 @@ export default async (req: Request, res: Response) => {
   });
 
   const mutation = `
-    mutation CreateRun($workflowId: uuid!) {
-      insert_workflow_runs_one(object: { workflow_id: $workflowId, status: running, started_at: "now()" }) {
+    mutation CreateRun($workflowId: uuid!, $initialInput: jsonb) {
+      insert_workflow_runs_one(object: { workflow_id: $workflowId, status: running, started_at: "now()", input: $initialInput }) {
         id
       }
     }
   `;
 
   try {
-    const data: any = await client.request(mutation, { workflowId });
+    const data: any = await client.request(mutation, { workflowId, initialInput: initialInput || {} });
     return res.status(200).json({ runId: data.insert_workflow_runs_one?.id });
   } catch (err: any) {
     if (err.response && err.response.errors) {

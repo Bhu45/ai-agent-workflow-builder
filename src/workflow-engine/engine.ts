@@ -8,10 +8,13 @@ import {
   updateWorkflowRunStatus,
   createStepRun,
   updateStepRunStatus,
-  internalDbWrite
+  internalDbWrite,
+  fetchWorkflowRunAsAdmin,
+  internalNotify
 } from './api';
 import { executeLlmCall } from './steps/llm';
 import { executeHttpRequest } from './steps/http';
+import { GraphQLClient } from 'graphql-request';
 
 export async function executeWorkflowFromRun(runId: string, workflowId: string, initialInput: any = {}) {
   console.log(`[Engine] executeWorkflowFromRun started for runId=${runId}, workflowId=${workflowId}`);
@@ -19,6 +22,16 @@ export async function executeWorkflowFromRun(runId: string, workflowId: string, 
   try {
     const workflow = await fetchWorkflowAsAdmin(workflowId);
     if (!workflow) throw new Error('Workflow not found');
+    
+    const run = await fetchWorkflowRunAsAdmin(runId);
+    const triggeredBy = run?.triggered_by;
+    
+    // Find the role of the user who triggered the run
+    let userRole: string | null = null;
+    if (triggeredBy) {
+      const member = workflow.organization.org_members.find((m: any) => m.user_id === triggeredBy);
+      if (member) userRole = member.role;
+    }
     
     const orgId = workflow.org_id;
 
@@ -76,13 +89,18 @@ export async function executeWorkflowFromRun(runId: string, workflowId: string, 
           return { runId, status: 'paused', message: 'Workflow paused for approval' };
 
         case 'db_write':
+          if (userRole !== 'owner') {
+            throw new Error('Only owners can execute db_write steps. Run was triggered by a non-owner or webhook without trusted context.');
+          }
           await internalDbWrite(orgId, runId, currentInput);
           output = { success: true };
           break;
 
         case 'notify':
-          // Real implementation would send email/webhook
-          console.log(`[Engine] Notify: ${JSON.stringify(currentInput)}`);
+          if (userRole !== 'owner') {
+            throw new Error('Only owners can execute notify steps. Run was triggered by a non-owner or webhook without trusted context.');
+          }
+          await internalNotify(orgId, runId, currentInput);
           output = { notified: true };
           break;
 
@@ -121,10 +139,10 @@ export async function executeWorkflowFromRun(runId: string, workflowId: string, 
   }
 }
 
-export async function resumeWorkflow(runId: string, userId: string, approved: boolean) {
+export async function resumeWorkflow(runId: string, userId: string, approved: boolean, authHeader?: string | null) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getWorkflowRunAsUser, atomicResumeWorkflow } = require('./api');
-  const run = await getWorkflowRunAsUser(runId, userId);
+  const run = await getWorkflowRunAsUser(runId, authHeader);
   if (!run) throw new Error('Run not found or unauthorized');
 
   if (run.status !== 'paused') {

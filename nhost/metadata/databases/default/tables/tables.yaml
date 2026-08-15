@@ -8,3 +8,5 @@
 - "!include public_workflow_steps.yaml"
 - "!include public_workflow_triggers.yaml"
 - "!include public_workflows.yaml"
+- "!include public_organization_usage_summary.yaml"
+- "!include public_notifications.yaml"
